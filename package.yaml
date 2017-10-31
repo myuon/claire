@@ -11,8 +11,14 @@ category:            Language
 extra-source-files:
 - README.md
 
+default-extensions:
+- Strict
+- PatternSynonyms
+
 dependencies:
   - base >= 4.7 && < 5
+  - containers >= 0.5.10
+  - trifecta
 
 executables:
   claire:
