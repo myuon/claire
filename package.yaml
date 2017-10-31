@@ -1,0 +1,20 @@
+name:                claire
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/myuon/claire#readme
+license:             MIT
+author:              myuon
+maintainer:          ioi.joi.koi.loi@gmail.com
+copyright:           myuon
+category:            Language
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+
+executables:
+  claire:
+    source-dirs:      src
+    main:             Main.hs
