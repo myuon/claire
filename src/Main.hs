@@ -1,8 +1,13 @@
 module Main where
 
+import Control.Applicative
 import Control.Monad
+import Control.Monad.IO.Class
 import qualified Data.Sequence as S
-import Text.Trifecta
+import Data.List
+import Text.Trifecta hiding (Source)
+import System.IO
+import GHC.Exts (toList)
 
 -- First-order logic
 type VSymbol = String
@@ -32,7 +37,7 @@ pFormula = parseString parser mempty where
   parser :: Parser Formula
   parser = choice [try por, try pand, try pimp, pfml]
 
-  pfml = spaces *> choice [parens parser, pforall, pneg, Pred "var" . return . Var <$> pvar]
+  pfml = spaces *> choice [parens parser, pforall, pexist, pneg, FTerm . Var <$> pvar]
 
   pvar = some alphaNum
 
@@ -64,6 +69,12 @@ pFormula = parseString parser mempty where
     symbol "."
     fml <- parser
     return $ Forall v fml
+  pexist = do
+    symbol "exist"
+    v <- pvar <* spaces
+    symbol "."
+    fml <- parser
+    return $ Neg $ Forall v $ Neg fml
 
 -- LK
 data Rule
@@ -85,7 +96,16 @@ data Rule
   deriving (Eq, Show, Read)
 
 -- Judgement xs ys <=> x1 .. xn |- y1 .. ym
-data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq, Show)
+data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
+
+instance Show Judgement where
+  show (Judgement assms props) = show (toList assms) ++ " |- " ++ show (toList props)
+
+
+pRule :: String -> Result [Rule]
+pRule = parseString parser mempty where
+  parser :: Parser [Rule]
+  parser = (fmap read $ some $ noneOf ";") `sepBy` (symbol ";")
 
 checker :: [Rule] -> [Judgement] -> Either (Rule, Judgement) [Judgement]
 checker = go where
@@ -96,7 +116,7 @@ checker = go where
   go (I : rs) (Judgement assms props : js) | S.length assms == 1 && assms == props = go rs js
   go (Cut i j fml : rs) (Judgement assms props : js) = go rs (Judgement (S.take i assms) (S.take j props S.:|> fml) : Judgement (fml S.<| S.drop i assms) (S.drop j props) : js)
   go (AndL1 : rs) (Judgement (assms S.:|> (a :/\: b)) props : js) = go rs (Judgement (assms S.:|> a) props : js)
-  go (AndL1 : rs) (Judgement (assms S.:|> (a :/\: b)) props : js) = go rs (Judgement (assms S.:|> b) props : js)
+  go (AndL2 : rs) (Judgement (assms S.:|> (a :/\: b)) props : js) = go rs (Judgement (assms S.:|> b) props : js)
   go (NegL : rs) (Judgement (assms S.:|> Neg a) props : js) = go rs (Judgement assms (a S.:<| props) : js)
   go (ForallL t : rs) (Judgement (assms S.:|> Forall x a) props : js) = go rs (Judgement (assms S.:|> subst a t x) props : js)
 
@@ -115,18 +135,20 @@ checker = go where
 
 main :: IO ()
 main = forever $ do
-  putStr "thm>"
-  Success p <- pFormula <$> getLine
-  prove [Judgement S.Empty (S.singleton p)]
+  putStr "thm>" >> hFlush stdout
+  Success fml <- pFormula <$> getLine
 
+  run [Judgement S.Empty (S.singleton fml)]
   where
-    prove js = do
-      putStr "goal>" >> print (head js)
-      putStr $ "...and " ++ show (length js - 1) ++ " more goals"
-      
-      putStr "rule>"
-      r <- read <$> getLine
-      let Right js' = checker [r] js
-      unless (null js') $ prove js'
-      
+    run js = do
+      putStrLn $ "..goal>" ++ show (head js)
+      when (length js >= 2) $ putStr $ "...and " ++ show (length js - 1) ++ " more goals"
+
+      putStr "..rule>" >> hFlush stdout
+      Success rs <- pRule <$> getLine
+      case checker rs js of
+        Left (r,j) -> putStrLn ("Cannot apply " ++ show r ++ " to " ++ show j) >> run js
+        Right [] -> putStrLn "QED."
+        Right js' -> run js'
+
 
