@@ -12,9 +12,33 @@ extra-source-files:
 - README.md
 
 dependencies:
-  - base >= 4.7 && < 5
+- base >= 4.7 && < 5
+- containers >= 0.5.10
+- trifecta
+- lens
+
+default-extensions:
+- Strict
+- PatternSynonyms
+
+ghc-options:
+- -Wunused-imports
+- -Wunused-local-binds
+
+library:
+  source-dirs: src
 
 executables:
   claire:
     source-dirs:      src
     main:             Main.hs
+
+tests:
+  claire-test:
+    source-dirs:      test
+    main:	      Driver.hs
+    dependencies:
+    - claire
+    - tasty-hunit
+    - tasty
+
