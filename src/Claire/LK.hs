@@ -18,6 +18,7 @@ data Formula
   deriving (Eq, Show, Read)
 
 pattern FmlTerm t = Pred "term" [t]
+pattern (:-->:) fml1 fml2 = Neg ((Neg (Neg fml1)) :/\: Neg fml2)
 
 subst :: Formula -> Term -> VSymbol -> Formula
 subst (FmlTerm (Var v)) t x | v == x = FmlTerm t
@@ -47,13 +48,10 @@ pFormula = parseString parser mempty where
     fml2 <- parser <* spaces
     return $ Neg $ (Neg fml1) :/\: (Neg fml2)
   pimp = do
-    -- A --> B
-    -- = ~A \/ B
-    -- = ~ (~~A /\ ~B)
     fml1 <- pfml <* spaces
     symbol "->"
     fml2 <- parser <* spaces
-    return $ Neg $ (Neg (Neg fml1)) :/\: Neg fml2
+    return $ fml1 :-->: fml2
   pneg = do
     symbol "~"
     pfml <- parser

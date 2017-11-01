@@ -4,6 +4,9 @@ import qualified Data.Sequence as S
 import Text.Trifecta
 import Claire.LK
 
+checker' :: [Rule] -> Formula -> Either (Rule, Judgement) [Judgement]
+checker' rs f = checker rs [Judgement S.Empty (S.singleton f)]
+
 checker :: [Rule] -> [Judgement] -> Either (Rule, Judgement) [Judgement]
 checker = go where
   go [] [] = Right []
