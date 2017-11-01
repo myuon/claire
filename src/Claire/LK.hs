@@ -19,6 +19,7 @@ data Formula
 
 pattern FmlTerm t = Pred "term" [t]
 pattern (:-->:) fml1 fml2 = Neg ((Neg (Neg fml1)) :/\: Neg fml2)
+pattern (:\/:) fml1 fml2 = Neg (Neg fml1 :/\: Neg fml2)
 
 subst :: Formula -> Term -> VSymbol -> Formula
 subst (FmlTerm (Var v)) t x | v == x = FmlTerm t
@@ -46,7 +47,7 @@ pFormula = parseString parser mempty where
     fml1 <- pfml <* spaces
     symbol "\\/"
     fml2 <- parser <* spaces
-    return $ Neg $ (Neg fml1) :/\: (Neg fml2)
+    return $ fml1 :\/: fml2
   pimp = do
     fml1 <- pfml <* spaces
     symbol "->"

@@ -5,5 +5,6 @@ import Claire
 
 test_checker =
   [ testCase "prove: a -> a" $ checker' [NegR, CL, AndL2, NegL, AndL1, NegL, NegR, I] (FmlTerm (Var "a") :-->: FmlTerm (Var "a")) @?= Right []
+  , testCase "prove: a \\/ ~a" $ checker' [NegR, CL, AndL2, NegL, AndL1, I] (FmlTerm (Var "a") :\/: Neg (FmlTerm (Var "a"))) @?= Right []
   ]
 
