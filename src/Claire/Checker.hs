@@ -6,12 +6,13 @@ import qualified Data.Set as S
 import Text.Trifecta
 import Claire.FOL
 
-checker' :: [Rule] -> Formula -> Either ([Rule], [Judgement]) [Judgement]
-checker' rs f = checker rs [Judgement M.empty f]
+checker' :: Thms -> [Rule] -> Formula -> Either ([Rule], [Judgement]) [Judgement]
+checker' thms rs f = checker thms rs [Judgement M.empty f]
 
-checker :: [Rule] -> [Judgement] -> Either ([Rule], [Judgement]) [Judgement]
-checker = go where
-  go (Init k:rs) (Judgement assms prop : js) | assms M.! k == prop = go rs js
+checker :: Thms -> [Rule] -> [Judgement] -> Either ([Rule], [Judgement]) [Judgement]
+checker thms = go where
+  go (Init k:rs) (Judgement assms prop : js) | k `M.member` assms && assms M.! k == prop = go rs js
+  go (Init k:rs) (Judgement assms prop : js) | k `M.member` (getThms thms) && getThms thms M.! k == prop = go rs js
   go (Abs:rs) (Judgement assms prop : js) = go rs (Judgement (addAssm (Neg prop) assms) Bottom : js)
   go (TopI:rs) (Judgement assms prop : js) | prop == Bottom = go rs js
   go (BottomE:rs) (Judgement assms prop : js) = go rs (Judgement assms Bottom : js)
@@ -64,4 +65,11 @@ pCommand = parseString parser mempty where
    , symbol "existI" *> (ExistI <$> parens (pTerm <$> some (noneOf ")")))
    , symbol "existE" *> (ExistE <$> parens (pFormula <$> some (noneOf ")")))
    ]
+
+type ThmIndex = String
+
+newtype Thms = Thms { getThms :: M.Map ThmIndex Formula }
+
+insertThm :: ThmIndex -> Formula -> Thms -> Thms
+insertThm idx fml (Thms m) = Thms $ M.insert idx fml m
 
