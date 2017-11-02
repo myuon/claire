@@ -17,7 +17,7 @@ dependencies:
 - trifecta
 - parsers
 - lens
-- array
+- mtl
 
 default-extensions:
 - PatternSynonyms
@@ -36,6 +36,9 @@ library:
   build-tools:
   - alex
   - happy
+
+  dependencies:
+  - array
 
   other-modules:
   - Claire.FOL.Lexer
