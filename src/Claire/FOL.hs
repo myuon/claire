@@ -1,4 +1,4 @@
-module Claire.LK where
+module Claire.FOL where
 
 import qualified Data.Sequence as S
 import Text.Trifecta

@@ -2,7 +2,7 @@ module Claire.Checker where
 
 import qualified Data.Sequence as S
 import Text.Trifecta
-import Claire.LK
+import Claire.FOL
 
 checker' :: [Rule] -> Formula -> Either (Rule, Judgement) [Judgement]
 checker' rs f = checker rs [Judgement S.Empty (S.singleton f)]

@@ -1,4 +1,4 @@
-module ClaireTest.LKTest where
+module ClaireTest.FOLTest where
 
 import Control.Lens
 import Test.Tasty.HUnit
