@@ -5,7 +5,6 @@ module Claire.FOL
   , module Claire.FOL.Syntax
   , pFormula
   , pTerm
-  , pattern Neg
   , addAssm
   ) where
 
@@ -21,8 +20,6 @@ pFormula = folparser . alexScanTokens
 
 pTerm :: String -> Term
 pTerm = termparser . alexScanTokens
-
-pattern Neg a = a :->: Bottom
 
 type AssmIndex = String
 

@@ -19,6 +19,9 @@ data Formula
   | Exist VSymbol Formula
   deriving (Eq, Show)
 
+pattern Const c = Pred c []
+pattern Neg a = a :->: Bottom
+
 fv :: Formula -> S.Set VSymbol
 fv = go where
   fvt (Var v) = S.singleton v

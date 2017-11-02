@@ -22,7 +22,12 @@ import Claire.FOL.Lexer
   ','      { TokenComma }
   ')'      { TokenRParen }
   '('      { TokenLParen }
+  '~'      { TokenTilda }
   var      { TokenSym $$ }
+
+%right '->'
+%left and or
+%nonassoc '~'
 
 %%
 
@@ -32,6 +37,7 @@ Formula
   | exist var '.' Formula   { Exist $2 $4 }
   | Formula or Formula      { $1 :\/: $3 }
   | Formula and Formula     { $1 :/\: $3 }
+  | '~' Formula             { Neg $2 }
   | top                     { Top }
   | bottom                  { Bottom }
   | '(' Formula ')'         { $2 }

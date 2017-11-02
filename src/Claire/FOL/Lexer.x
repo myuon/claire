@@ -22,6 +22,7 @@ tokens :-
   ","      { \s -> TokenComma }
   "("      { \s -> TokenLParen }
   ")"      { \s -> TokenRParen }
+  "~"      { \s -> TokenTilda }
   $alpha [$alpha $digit \_ \']*      { TokenSym }
 
 {
@@ -38,6 +39,7 @@ data Token
   | TokenComma
   | TokenLParen
   | TokenRParen
+  | TokenTilda
   deriving (Eq, Show)
 }
 
