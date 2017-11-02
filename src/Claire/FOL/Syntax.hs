@@ -6,7 +6,12 @@ type VSymbol = String
 type FSymbol = String
 type PSymbol = String
 
-data Term = Var VSymbol | Func FSymbol [Term] deriving (Eq, Show)
+data Term = Var VSymbol | Func FSymbol [Term] deriving (Eq)
+
+instance Show Term where
+  show (Var v) = v
+  show (Func f []) = f
+  show (Func f ts) = f ++ show ts
 
 data Formula
   = Pred PSymbol [Term]
@@ -17,7 +22,18 @@ data Formula
   | Formula :->: Formula
   | Forall VSymbol Formula
   | Exist VSymbol Formula
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show Formula where
+  show (Pred p []) = p
+  show (Pred p ts) = p ++ show ts
+  show Top = "top"
+  show Bottom = "bottom"
+  show (f1 :/\: f2) = show f1 ++ " /\\ " ++ show f2
+  show (f1 :\/: f2) = show f1 ++ " \\/ " ++ show f2
+  show (f1 :->: f2) = show f1 ++ " -> " ++ show f2
+  show (Forall v f) = "forall " ++ v ++ "." ++ show f
+  show (Exist v f) = "exist " ++ v ++ "." ++ show f
 
 pattern Const c = Pred c []
 pattern Neg a = a :->: Bottom

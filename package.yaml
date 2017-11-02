@@ -47,6 +47,7 @@ executables:
     main:             Main.hs
     dependencies:
     - claire
+    - ansi-wl-pprint
 
 tests:
   claire-test:

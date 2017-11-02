@@ -40,7 +40,7 @@ pCommand = parseString parser mempty where
   parser = choice [papply]
 
   papply = do
-    symbol "apply"
+--    symbol "apply"
     Apply <$> pRules
 --  ppick = symbol "pick" *> return Pick
 
@@ -53,16 +53,15 @@ pCommand = parseString parser mempty where
    , symbol "topI" *> return TopI
    , symbol "bottomE" *> return BottomE
    , symbol "andI" *> return AndI
-   , symbol "andE1" *> (AndE1 <$> parens (pFormula <$> some anyChar))
-   , symbol "andE2" *> (AndE2 <$> parens (pFormula <$> some anyChar))
+   , symbol "andE1" *> (AndE1 <$> parens (pFormula <$> some (noneOf ")")))
+   , symbol "andE2" *> (AndE2 <$> parens (pFormula <$> some (noneOf ")")))
    , symbol "orI1" *> return OrI1
    , symbol "orI2" *> return OrI2
    , symbol "impI" *> return ImpI
-   , symbol "impE" *> (ImpE <$> parens (pFormula <$> some anyChar))
+   , symbol "impE" *> (ImpE <$> parens (pFormula <$> some (noneOf ")")))
    , symbol "forallI" *> return ForallI
-   , symbol "forallE" *> (ForallE <$> parens (pTerm <$> some anyChar) <*> some (letter <|> digit))
-   , symbol "existI" *> (ExistI <$> parens (pTerm <$> some anyChar))
-   , symbol "existE" *> (ExistE <$> parens (pFormula <$> some anyChar))
+   , symbol "forallE" *> (ForallE <$> parens (pTerm <$> some (noneOf ")")) <*> some (letter <|> digit))
+   , symbol "existI" *> (ExistI <$> parens (pTerm <$> some (noneOf ")")))
+   , symbol "existE" *> (ExistE <$> parens (pFormula <$> some (noneOf ")")))
    ]
-
 
