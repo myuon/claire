@@ -1,7 +1,7 @@
 module Main where
 
 import Control.Monad
-import qualified Data.Sequence as S
+import qualified Data.Map as M
 import Text.Trifecta hiding (Source)
 import System.IO
 import Claire
@@ -9,9 +9,9 @@ import Claire
 main :: IO ()
 main = forever $ do
   putStr "thm>" >> hFlush stdout
-  Success fml <- pFormula <$> getLine
+  fml <- pFormula <$> getLine
 
-  run [Judgement S.Empty (S.singleton fml)]
+  run [Judgement M.empty fml]
   where
     run js = do
       putStrLn $ "goal>" ++ show (head js)

@@ -1,97 +1,47 @@
-module Claire.FOL where
+module Claire.FOL
+  ( Rule(..)
+  , Judgement(..)
 
-import qualified Data.Sequence as S
-import Text.Trifecta
+  , module Claire.FOL.Syntax
+  , pFormula
+  , pTerm
+  , pattern Neg
+  , addAssm
+  ) where
+
+import qualified Data.Map as M
 import GHC.Exts (toList)
 
--- First-order logic
-type VSymbol = String
-type FSymbol = String
-type PSymbol = String
+import Claire.FOL.Syntax
+import Claire.FOL.Lexer
+import Claire.FOL.Parser
 
-data Term = Var VSymbol | Func FSymbol [Term] deriving (Eq, Show, Read)
-data Formula
-  = Pred PSymbol [Term]
-  | Neg Formula
-  | Formula :/\: Formula
-  | Forall VSymbol Formula
-  deriving (Eq, Show, Read)
+pFormula :: String -> Formula
+pFormula = folparser . alexScanTokens
 
-pattern FmlTerm t = Pred "term" [t]
-pattern (:-->:) fml1 fml2 = Neg ((Neg (Neg fml1)) :/\: Neg fml2)
-pattern (:\/:) fml1 fml2 = Neg (Neg fml1 :/\: Neg fml2)
+pTerm :: String -> Term
+pTerm = termparser . alexScanTokens
 
-subst :: Formula -> Term -> VSymbol -> Formula
-subst (FmlTerm (Var v)) t x | v == x = FmlTerm t
-subst (Pred p ts) t x = Pred p ts
-subst (Neg fml) t x = Neg (subst fml t x)
-subst (fml1 :/\: fml2) t x = subst fml1 t x :/\: subst fml2 t x
-subst (Forall y fml) t x | x == y = Forall y fml
-subst (Forall y fml) t x | otherwise = Forall y (subst fml t x)
+pattern Neg a = a :->: Bottom
 
-pFormula :: String -> Result Formula
-pFormula = parseString parser mempty where
-  parser :: Parser Formula
-  parser = choice [try por, try pand, try pimp, pfml]
+type AssmIndex = String
 
-  pfml = spaces *> choice [parens parser, pforall, pexist, pneg, FmlTerm . Var <$> pvar]
-
-  pvar = some alphaNum
-
-  pand = do
-    fml1 <- pfml <* spaces
-    symbol "/\\"
-    fml2 <- parser <* spaces
-    return $ fml1 :/\: fml2
-  por = do
-    fml1 <- pfml <* spaces
-    symbol "\\/"
-    fml2 <- parser <* spaces
-    return $ fml1 :\/: fml2
-  pimp = do
-    fml1 <- pfml <* spaces
-    symbol "->"
-    fml2 <- parser <* spaces
-    return $ fml1 :-->: fml2
-  pneg = do
-    symbol "~"
-    pfml <- parser
-    return $ Neg pfml
-  pforall = do
-    symbol "forall"
-    v <- pvar <* spaces
-    symbol "."
-    fml <- parser
-    return $ Forall v fml
-  pexist = do
-    symbol "exist"
-    v <- pvar <* spaces
-    symbol "."
-    fml <- parser
-    return $ Neg $ Forall v $ Neg fml
-
--- LK
+-- rules for natural deduction
 data Rule
-  -- axiom
-  = I
+  = Init AssmIndex | Abs
+  | TopI | BottomE
+  | AndI | AndE1 Formula | AndE2 Formula
+  | OrI1 | OrI2 | OrE Formula Formula
+  | ImpI | ImpE Formula
+  | ForallI | ForallE Term VSymbol
+  | ExistI Term | ExistE Formula
+  deriving (Eq, Show)
 
-  -- cut
-  | Cut Int Int Formula
+data Judgement = Judgement (M.Map AssmIndex Formula) Formula deriving (Eq)
 
-  -- left logical rules
-  | AndL1 | AndL2 | NegL | ForallL Term
-
-  -- right logical rules
-  | AndR Int Int | NegR | ForallR VSymbol
-
-  -- structual rules
-  | WL | CL | PL Int Int
-  | WR | CR | PR Int Int
-  deriving (Eq, Show, Read)
-
--- Judgement xs ys <=> x1 .. xn |- y1 .. ym
-data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
+addAssm :: Formula -> M.Map AssmIndex Formula -> M.Map AssmIndex Formula
+addAssm fml assms = M.insert (show $ M.size assms) fml assms
 
 instance Show Judgement where
-  show (Judgement assms props) = show (toList assms) ++ " |- " ++ show (toList props)
+  show (Judgement assms prop) = show (toList assms) ++ " |- " ++ show prop
 
