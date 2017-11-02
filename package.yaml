@@ -1,5 +1,5 @@
 name:                claire
-version:             0.1.0.0
+version:             0.2.0.0
 #synopsis:
 #description:
 homepage:            https://github.com/myuon/claire#readme
@@ -15,23 +15,39 @@ dependencies:
 - base >= 4.7 && < 5
 - containers >= 0.5.10
 - trifecta
+- parsers
 - lens
+- array
 
 default-extensions:
-- Strict
 - PatternSynonyms
 
 ghc-options:
 - -Wunused-imports
 - -Wunused-local-binds
 
+extra-source-files:
+- src/Claire/FOL/Lexer.x
+- src/Claire/FOL/Parser.y
+
 library:
   source-dirs: src
 
+  build-tools:
+  - alex
+  - happy
+
+  other-modules:
+  - Claire.FOL.Lexer
+  - Claire.FOL.Parser
+
 executables:
-  claire:
-    source-dirs:      src
+  clairepl:
+    source-dirs:      app
     main:             Main.hs
+    dependencies:
+    - claire
+    - ansi-wl-pprint
 
 tests:
   claire-test:
