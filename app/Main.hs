@@ -8,7 +8,7 @@ import System.IO
 import Claire
 
 main :: IO ()
-main = claire (Thms M.empty)
+main = claire defThms
 
 claire :: Thms -> IO ()
 claire thms = do

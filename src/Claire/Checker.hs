@@ -6,8 +6,8 @@ import qualified Data.Set as S
 import Text.Trifecta
 import Claire.FOL
 
-checker' :: Thms -> [Rule] -> Formula -> Either ([Rule], [Judgement]) [Judgement]
-checker' thms rs f = checker thms rs [Judgement M.empty f]
+checker' :: [Rule] -> Formula -> Either ([Rule], [Judgement]) [Judgement]
+checker' rs f = checker defThms rs [Judgement M.empty f]
 
 checker :: Thms -> [Rule] -> [Judgement] -> Either ([Rule], [Judgement]) [Judgement]
 checker thms = go where
@@ -72,4 +72,7 @@ newtype Thms = Thms { getThms :: M.Map ThmIndex Formula }
 
 insertThm :: ThmIndex -> Formula -> Thms -> Thms
 insertThm idx fml (Thms m) = Thms $ M.insert idx fml m
+
+defThms :: Thms
+defThms = Thms M.empty
 
