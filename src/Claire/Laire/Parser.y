@@ -74,8 +74,9 @@ Lstmts
   | Decl Lstmts  { $1 : $2 }
 
 Decl
-  : theorem ident ':' Formula proof Commands qed  { Thm $2 $4 (Proof $6) }
-  | axiom ident ':' Formula  { Axiom $2 $4 }
+  : theorem ident ':' Formula  { ThmD $2 $4 }
+  | proof Commands qed  { PrfD (Proof $2) }
+  | axiom ident ':' Formula  { AxiomD $2 $4 }
 
 Commands
   : Command  { [$1] }
