@@ -39,12 +39,16 @@ checker thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
 
 data Command
   = Apply [Rule]
-  | Pick
+  | Thm ThmIndex
   deriving (Eq, Show)
 
 pCommand :: String -> Result Command
 pCommand = parseString parser mempty where
-  parser = choice [papply]
+  parser = choice $ fmap try [pthm, papply]
+
+  pthm = do
+    symbol "thm"
+    Thm <$> some letter
 
   papply = do
 --    symbol "apply"
