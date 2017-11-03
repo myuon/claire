@@ -87,10 +87,11 @@ pCommand = parseString parser mempty where
 data Decl
   = Thm Formula
   | Axiom ThmIndex Formula
+  | PrintThms
 
 pDecl :: String -> Result Decl
 pDecl = parseString parser mempty where
-  parser = choice [paxiom, pthm]
+  parser = choice [paxiom, ppthms, pthm]
   
   paxiom = do
     symbol "axiom"
@@ -99,6 +100,9 @@ pDecl = parseString parser mempty where
   pthm = do
     symbol "thm"
     Thm . pFormula <$> some anyChar
+  ppthms = do
+    symbol "print thms"
+    return PrintThms
 
 --
 

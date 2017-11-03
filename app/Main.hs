@@ -18,6 +18,9 @@ claire thms = do
   case decl of
     Success (Thm fml) -> claire =<< prover fml thms
     Success (Axiom name fml) -> claire $ insertThm name fml thms
+    Success PrintThms -> do
+      mapM_ print $ M.assocs $ getThms thms
+      claire thms
     Failure err -> do
       putDoc $ _errDoc err
       claire thms
