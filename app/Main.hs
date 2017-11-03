@@ -6,11 +6,27 @@ import qualified Data.Map as M
 import Text.Trifecta hiding (Source)
 import Text.PrettyPrint.ANSI.Leijen (putDoc)
 import System.IO
+import System.Environment (getArgs)
 import Claire
 
 main :: IO ()
-main = claire defThms
+main = do
+  xs <- getArgs
+  case (xs /= []) of
+    True -> do
+      p <- readFile (head xs)
+      env <- claire defEnv . pLaire <$> readFile (head xs)
+      seq env $ mapM_ putStrLn $
+        [ "==========="
+        , "=== QED ==="
+        , "==========="
+        , ""
+        ]
+      mapM_ print $ M.assocs $ getEnv ((\(Right r) -> r) env)
+    False -> do
+      print . pLaire =<< getContents
 
+{-
 claire :: Thms -> IO ()
 claire thms = do
   putStr "decl [theorem/axiom]>" >> hFlush stdout
@@ -18,9 +34,9 @@ claire thms = do
   case decl of
     Success (Thm fml) -> claire =<< prover fml thms
     Success (Axiom name fml) -> claire $ insertThm name fml thms
-    Success PrintThms -> do
-      mapM_ print $ M.assocs $ getThms thms
-      claire thms
+--    Success PrintThms -> do
+--      mapM_ print $ M.assocs $ getThms thms
+--      claire thms
     Failure err -> do
       putDoc $ _errDoc err
       claire thms
@@ -57,4 +73,5 @@ prover origfml thms = run [Judgement S.empty (S.singleton origfml)] where
       Failure err -> do
         putDoc $ _errDoc err
         run js
+-}
 

@@ -5,7 +5,8 @@ import Claire.Laire.Syntax
 import Claire.Laire.Lexer
 }
 
-%name folparser
+%name laireparser
+%name folparser Formula
 %name termparser Term
 
 %tokentype { Token }
@@ -22,8 +23,42 @@ import Claire.Laire.Lexer
   ','      { TokenComma }
   ')'      { TokenRParen }
   '('      { TokenLParen }
+  ']'      { TokenRBracket }
+  '['      { TokenLBracket }
   '~'      { TokenTilda }
-  var      { TokenSym $$ }
+  ':'      { TokenColon }
+  ';'      { TokenSemicolon }
+  theorem  { TokenTheorem }
+  axiom    { TokenAxiom }
+  proof    { TokenProof }
+  qed      { TokenQed }
+  apply    { TokenApply }
+  use      { TokenUse }
+  I        { TokenI }
+  Cut      { TokenCut }
+  AndL1    { TokenAndL1 }
+  AndL2    { TokenAndL2 }
+  AndR     { TokenAndR }
+  OrL      { TokenOrL }
+  OrR1     { TokenOrR1 }
+  OrR2     { TokenOrR2 }
+  ImpL     { TokenImpL }
+  ImpR     { TokenImpR }
+  BottomL  { TokenBottomL }
+  TopR     { TokenTopR }
+  ForallL  { TokenForallL }
+  ForallR  { TokenForallR }
+  ExistL   { TokenExistL }
+  ExistR   { TokenExistR }
+  WL       { TokenWL }
+  WR       { TokenWR }
+  CL       { TokenCL }
+  CR       { TokenCR }
+  PL       { TokenPL }
+  PR       { TokenPR }
+  newline  { TokenNewline }
+  number   { TokenNumber $$ }
+  ident    { TokenIdent $$ }
 
 %right '->'
 %left and or
@@ -31,26 +66,74 @@ import Claire.Laire.Lexer
 
 %%
 
+Laire
+  : Lstmts  { Laire $1 }
+
+Lstmts
+  : {- empty -}  { [] }
+  | Decl Lstmts  { $1 : $2 }
+
+Decl
+  : theorem ident ':' Formula proof Commands qed  { Thm $2 $4 (Proof $6) }
+  | axiom ident ':' Formula  { Axiom $2 $4 }
+
+Commands
+  : Command  { [$1] }
+  | Command Commands  { $1 : $2 }
+
+Command
+  : apply Rule  { Apply [$2] }
+  | apply '(' Rules ')'  { Apply $3 }
+  | use ident  { Use $2 }
+
+Rules
+  : Rule  { [$1] }
+  | Rule ';' Rules  { $1 : $3 }
+
+Rule
+  : I  { I }
+  | Cut Formula  { Cut $2 }
+  | AndL1  { AndL1 }
+  | AndL2  { AndL2 }
+  | AndR  { AndR }
+  | OrL  { OrL }
+  | OrR1  { OrR1 }
+  | OrR2  { OrR2 }
+  | ImpL  { ImpL }
+  | ImpR  { ImpR }
+  | BottomL  { BottomL }
+  | TopR  { TopR }
+  | ForallL '[' Term ']'  { ForallL $3 }
+  | ForallR ident  { ForallR $2 }
+  | ExistL ident  { ExistL $2 }
+  | ExistR '[' Term ']'  { ExistR $3 }
+  | WL  { WL }
+  | WR  { WR }
+  | CL  { CL }
+  | CR  { CR }
+  | PL number  { PL $2 }
+  | PR number  { PR $2 }
+
 Formula
-  : Formula '->' Formula    { $1 :->: $3 }
-  | forall var '.' Formula  { Forall $2 $4 }
-  | exist var '.' Formula   { Exist $2 $4 }
-  | Formula or Formula      { $1 :\/: $3 }
-  | Formula and Formula     { $1 :/\: $3 }
-  | '~' Formula             { Neg $2 }
-  | top                     { Top }
-  | bottom                  { Bottom }
-  | '(' Formula ')'         { $2 }
-  | var '(' Terms ')'       { Pred $1 $3 }
-  | var                     { Pred $1 [] }
+  : Formula '->' Formula      { $1 :->: $3 }
+  | forall ident '.' Formula  { Forall $2 $4 }
+  | exist ident '.' Formula   { Exist $2 $4 }
+  | Formula or Formula        { $1 :\/: $3 }
+  | Formula and Formula       { $1 :/\: $3 }
+  | '~' Formula               { Neg $2 }
+  | top                       { Top }
+  | bottom                    { Bottom }
+  | '(' Formula ')'           { $2 }
+  | ident '(' Terms ')'       { Pred $1 $3 }
+  | ident                     { Pred $1 [] }
 
 Terms
   : Term  { [$1] }
   | Term ',' Terms  { $1 : $3 }
 
 Term
-  : var  { Var $1 }
-  | var '(' Terms ')'  { Func $1 $3 }
+  : ident  { Var $1 }
+  | ident '(' Terms ')'  { Func $1 $3 }
 
 {
 happyError s = error $ show s
