@@ -4,7 +4,7 @@ import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.Sequence as S
 import Text.Trifecta
-import Claire.FOL
+import Claire.Laire
 
 checker' :: [Rule] -> Formula -> Either (Rule, [Judgement]) [Judgement]
 checker' rs f = checker defThms rs [Judgement S.empty (S.singleton f)]

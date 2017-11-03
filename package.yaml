@@ -27,8 +27,8 @@ ghc-options:
 - -Wunused-local-binds
 
 extra-source-files:
-- src/Claire/FOL/Lexer.x
-- src/Claire/FOL/Parser.y
+- src/Claire/Laire/Lexer.x
+- src/Claire/Laire/Parser.y
 
 library:
   source-dirs: src
@@ -41,8 +41,8 @@ library:
   - array
 
   other-modules:
-  - Claire.FOL.Lexer
-  - Claire.FOL.Parser
+  - Claire.Laire.Lexer
+  - Claire.Laire.Parser
 
 executables:
   clairepl:

@@ -1,4 +1,4 @@
-module Claire.FOL.Syntax where
+module Claire.Laire.Syntax where
 
 import Data.Set as S
 

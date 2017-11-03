@@ -1,8 +1,8 @@
-module Claire.FOL
+module Claire.Laire
   ( Rule(..)
   , Judgement(..)
 
-  , module Claire.FOL.Syntax
+  , module Claire.Laire.Syntax
   , pFormula
   , pTerm
   ) where
@@ -10,9 +10,9 @@ module Claire.FOL
 import qualified Data.Sequence as S
 import GHC.Exts (toList)
 
-import Claire.FOL.Syntax
-import Claire.FOL.Lexer
-import Claire.FOL.Parser
+import Claire.Laire.Syntax
+import Claire.Laire.Lexer
+import Claire.Laire.Parser
 
 pFormula :: String -> Formula
 pFormula = folparser . alexScanTokens
