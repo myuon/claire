@@ -5,10 +5,9 @@ module Claire.FOL
   , module Claire.FOL.Syntax
   , pFormula
   , pTerm
-  , addAssm
   ) where
 
-import qualified Data.Map as M
+import qualified Data.Sequence as S
 import GHC.Exts (toList)
 
 import Claire.FOL.Syntax
@@ -23,21 +22,21 @@ pTerm = termparser . alexScanTokens
 
 type AssmIndex = String
 
--- rules for natural deduction
+-- rules for LK
 data Rule
-  = Init AssmIndex | Abs
-  | TopI | BottomE
-  | AndI | AndE1 Formula | AndE2 Formula
-  | OrI1 | OrI2 | OrE Formula Formula
-  | ImpI | ImpE Formula
-  | ForallI | ForallE Term VSymbol
-  | ExistI Term | ExistE Formula
+  = I | Cut Formula
+  | AndL1 | AndL2 | AndR
+  | OrL | OrR1 | OrR2
+  | ImpL | ImpR
+  | BottomL | TopR
+  | ForallL Term | ForallR VSymbol
+  | ExistL VSymbol | ExistR Term
+  | WL | WR
+  | CL | CR
+  | PL Int | PR Int
   deriving (Eq, Show)
 
-data Judgement = Judgement (M.Map AssmIndex Formula) Formula deriving (Eq)
-
-addAssm :: Formula -> M.Map AssmIndex Formula -> M.Map AssmIndex Formula
-addAssm fml assms = M.insert (show $ M.size assms) fml assms
+data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
 
 instance Show Judgement where
   show (Judgement assms prop) = show (toList assms) ++ " |- " ++ show prop

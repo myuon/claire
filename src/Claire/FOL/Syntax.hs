@@ -22,8 +22,9 @@ data Formula
   | Formula :->: Formula
   | Forall VSymbol Formula
   | Exist VSymbol Formula
-  deriving (Eq)
+  deriving (Eq, Show)
 
+{-
 instance Show Formula where
   show (Pred p []) = p
   show (Pred p ts) = p ++ show ts
@@ -34,6 +35,7 @@ instance Show Formula where
   show (f1 :->: f2) = show f1 ++ " -> " ++ show f2
   show (Forall v f) = "forall " ++ v ++ "." ++ show f
   show (Exist v f) = "exist " ++ v ++ "." ++ show f
+-}
 
 pattern Const c = Pred c []
 pattern Neg a = a :->: Bottom

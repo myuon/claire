@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Monad
+import qualified Data.Sequence as S
 import qualified Data.Map as M
 import Text.Trifecta hiding (Source)
 import Text.PrettyPrint.ANSI.Leijen (putDoc)
@@ -8,7 +9,7 @@ import System.IO
 import Claire
 
 main :: IO ()
-main = claire (Thms M.empty)
+main = claire defThms
 
 claire :: Thms -> IO ()
 claire thms = do
@@ -18,7 +19,7 @@ claire thms = do
   claire thms'
 
 prover :: Formula -> Thms -> IO Thms
-prover origfml thms = run [Judgement M.empty origfml] where
+prover origfml thms = run [Judgement S.empty (S.singleton origfml)] where
   run :: [Judgement] -> IO Thms
   run js = do
     putStrLn $ "goal>" ++ show (head js)
@@ -29,6 +30,7 @@ prover origfml thms = run [Judgement M.empty origfml] where
     case mcom of
       Success com -> 
         case com of
+          Thm i -> run $ (\(Judgement as ps:xs) -> Judgement (as S.:|> getThms thms M.! i) ps : xs) js
           Apply rs -> 
             case checker thms rs js of
               Left (r,j) -> do
