@@ -39,7 +39,7 @@ checker thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
 
 data Command
   = Apply [Rule]
-  | Thm ThmIndex
+  | Use ThmIndex
   deriving (Eq, Show)
 
 pCommand :: String -> Result Command
@@ -47,8 +47,8 @@ pCommand = parseString parser mempty where
   parser = choice $ fmap try [pthm, papply]
 
   pthm = do
-    symbol "thm"
-    Thm <$> some letter
+    symbol "use"
+    Use <$> some letter
 
   papply = do
 --    symbol "apply"
@@ -82,6 +82,25 @@ pCommand = parseString parser mempty where
    , symbol "PL" *> (PL <$> (read <$> some digit))
    , symbol "PR" *> (PR <$> (read <$> some digit))
    ]
+
+
+data Decl
+  = Thm Formula
+  | Axiom ThmIndex Formula
+
+pDecl :: String -> Result Decl
+pDecl = parseString parser mempty where
+  parser = choice [paxiom, pthm]
+  
+  paxiom = do
+    symbol "axiom"
+    name <- some letter <* spaces
+    Axiom name . pFormula <$> some anyChar
+  pthm = do
+    symbol "thm"
+    Thm . pFormula <$> some anyChar
+
+--
 
 type ThmIndex = String
 

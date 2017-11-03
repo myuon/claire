@@ -13,10 +13,14 @@ main = claire defThms
 
 claire :: Thms -> IO ()
 claire thms = do
-  putStr "thm>" >> hFlush stdout
-  fml <- pFormula <$> getLine
-  thms' <- prover fml thms
-  claire thms'
+  putStr "decl [theorem/axiom]>" >> hFlush stdout
+  decl <- pDecl <$> getLine
+  case decl of
+    Success (Thm fml) -> claire =<< prover fml thms
+    Success (Axiom name fml) -> claire $ insertThm name fml thms
+    Failure err -> do
+      putDoc $ _errDoc err
+      claire thms
 
 prover :: Formula -> Thms -> IO Thms
 prover origfml thms = run [Judgement S.empty (S.singleton origfml)] where
@@ -30,7 +34,7 @@ prover origfml thms = run [Judgement S.empty (S.singleton origfml)] where
     case mcom of
       Success com -> 
         case com of
-          Thm i -> run $ (\(Judgement as ps:xs) -> Judgement (as S.:|> getThms thms M.! i) ps : xs) js
+          Use i -> run $ (\(Judgement as ps:xs) -> Judgement (as S.:|> getThms thms M.! i) ps : xs) js
           Apply rs -> 
             case checker thms rs js of
               Left (r,j) -> do
