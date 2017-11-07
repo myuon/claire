@@ -6,6 +6,7 @@ import Claire.Laire.Lexer
 }
 
 %name laireparser
+%name declparser Decl
 %name folparser Formula
 %name termparser Term
 

@@ -18,6 +18,7 @@ dependencies:
 - lens
 - mtl
 - monad-coroutine
+- exceptions
 
 default-extensions:
 - PatternSynonyms

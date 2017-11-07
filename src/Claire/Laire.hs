@@ -4,6 +4,7 @@ module Claire.Laire
 
   , module Claire.Laire.Syntax
   , pLaire
+  , pDecl
   , pFormula
   , pTerm
   ) where
@@ -14,6 +15,9 @@ import Claire.Laire.Parser
 
 pLaire :: String -> Laire
 pLaire = laireparser . alexScanTokens
+
+pDecl :: String -> Decl
+pDecl = declparser . alexScanTokens
 
 pFormula :: String -> Formula
 pFormula = folparser . alexScanTokens

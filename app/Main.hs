@@ -1,5 +1,8 @@
 module Main where
 
+import Control.Monad.Coroutine
+import Control.Monad.Coroutine.SuspensionFunctors
+import Control.Monad.State
 import qualified Data.Map as M
 import System.IO
 import System.Environment (getArgs)
@@ -29,8 +32,18 @@ main = do
       clairepl defEnv
 
 clairepl :: Env -> IO ()
-clairepl thms = do
-  putStr "decl [theorem/axiom]>" >> hFlush stdout
-  p <- pLaire <$> getLine
-  print p
+clairepl env = runrepl env toplevelM
+
+runrepl :: Env -> Coroutine (Await Decl) (StateT Env IO) ()  -> IO ()
+runrepl env k = do
+  (result,env') <- runStateT (resume k) env
+  putStrLn $ "env: " ++ show env'
+  
+  case result of
+    Right () -> return ()
+    Left (Await k) -> do
+      putStr "decl>" >> hFlush stdout
+      t <- pDecl <$> getLine
+
+      runrepl env' (k t)
 
