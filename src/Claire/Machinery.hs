@@ -36,27 +36,18 @@ instance Show DeclException where
 
 instance Exception DeclException
 
-thmM :: (Monad m, MonadThrow m) => ThmIndex -> Formula -> Coroutine (Await Decl) (StateT Env m) ()
-thmM idx fml = do
-  decl <- await
-  case decl of
-    PrfD (Proof coms) -> do
-      env <- lift get
-      result <- lift $ evalStateT (feeds coms (commandM env)) [Judgement S.empty (S.singleton fml)]
-      case result of
-        Right () -> lift $ modify $ insertThm idx fml
-        Left (k,coms) -> lift $ throwM $ ProofNotFinished k coms
-    z -> error $ "unexpected decl:" ++ show z
-
 toplevelM :: (Monad m, MonadThrow m) => Coroutine (Await Decl) (StateT Env m) ()
 toplevelM = forever $ do
   decl <- await
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
-    ThmD idx fml -> do
-      thmM idx fml
-    z -> error $ "unexpected decl:" ++ show z
+    ThmD idx fml (Proof coms) -> do
+      env <- lift get
+      result <- lift $ evalStateT (feeds coms (commandM env)) [Judgement S.empty (S.singleton fml)]
+      case result of
+        Right () -> lift $ modify $ insertThm idx fml
+        Left (k,coms) -> lift $ throwM $ ProofNotFinished k coms
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where

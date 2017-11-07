@@ -49,7 +49,7 @@ checker env (Proof coms) js = foldl (\m r -> m >>= go r) (Right js) coms where
 
 claire :: Env -> Laire -> Either () Env
 claire env (Laire decls) = foldl (\m r -> m >>= go r) (Right env) decls where
-  go (ThmD i fml) env = case checker env undefined [Judgement S.empty (S.singleton fml)] of
+  go (ThmD i fml p) env = case checker env p [Judgement S.empty (S.singleton fml)] of
     Right [] -> Right $ insertThm i fml env
     Left p -> error $ show p
   go (AxiomD i fml) env = Right $ insertThm i fml env

@@ -14,9 +14,8 @@ data Command
   deriving (Show)
 
 data Decl
-  = ThmD ThmIndex Formula
+  = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
-  | PrfD Proof
   deriving Show
 
 data Proof
