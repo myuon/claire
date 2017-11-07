@@ -16,6 +16,10 @@ data ComSuspender y
   | CannotApply Rule [Judgement] y
   deriving (Functor)
 
+instance Show (ComSuspender y) where
+  show (ComAwait _) = "ComAwait"
+  show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
+
 commandM :: (Monad m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
   com <- suspend $ ComAwait return
@@ -37,6 +41,11 @@ data DeclSuspender m y
   | ProofNotFinished [Judgement] (Command -> y)
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
+
+instance Show (DeclSuspender m y) where
+  show (DeclAwait _) = "DeclAwait"
+  show (ProofNotFinished js _) = "ProofNotFinished: " ++ show js
+  show (ComError e _) = "ComError: " ++ show e
 
 toplevelM :: Monad m => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do

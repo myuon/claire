@@ -13,14 +13,14 @@ main = do
   case (xs /= []) of
     True -> do
       p <- readFile (head xs)
-      env <- claire defEnv . pLaire <$> readFile (head xs)
+      env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
       seq env $ mapM_ putStrLn $
         [ "==========="
         , "=== QED ==="
         , "==========="
         , ""
         ]
-      mapM_ print $ M.assocs $ getEnv ((\(Right r) -> r) env)
+      mapM_ print $ M.assocs $ getEnv env
     False -> do
       mapM_ putStrLn $
         [ "========================="
@@ -30,26 +30,38 @@ main = do
         ]
       clairepl defEnv
 
-clairepl :: Env -> IO ()
-clairepl env = runrepl env toplevelM
+claire :: Env -> [Decl] -> IO Env
+claire = go toplevelM where
+  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
+  go machine env decls = do
+    (result,env') <- flip runStateT env (resume machine)
+    case result of
+      Left (DeclAwait cont) -> case decls of
+        [] -> return env'
+        (d:ds) -> go (cont d) env' ds
+      Left z -> do
+        print z
+        return env'
 
-runrepl :: Env -> Coroutine (DeclSuspender IO) (StateT Env IO) () -> IO ()
-runrepl env k = do
-  (result,env') <- flip runStateT env $ resume k
-  putStrLn $ "env: " ++ show env'
+clairepl :: Env -> IO ()
+clairepl env = go env toplevelM where
+  go :: Env -> Coroutine (DeclSuspender IO) (StateT Env IO) () -> IO ()
+  go env k = do
+    (result,env') <- flip runStateT env $ resume k
+    putStrLn $ "env: " ++ show env'
   
-  case result of
-    Right () -> runrepl env' k
-    Left (DeclAwait k) -> do
-      putStr "decl>" >> hFlush stdout
-      t <- pDecl <$> getLine
-      runrepl env' (k t)
-    Left (ProofNotFinished js cont) -> do
-      mapM_ print js
-      putStr "command>" >> hFlush stdout
-      t <- pCommand <$> getLine
-      runrepl env' (cont t)
-    Left (ComError (CannotApply r js _) cont) -> do
-      putStrLn $ "Cannot apply " ++ show r ++ " to " ++ show js
-      runrepl env' cont
+    case result of
+      Right () -> go env' k
+      Left (DeclAwait k) -> do
+        putStr "decl>" >> hFlush stdout
+        t <- pDecl <$> getLine
+        go env' (k t)
+      Left (ProofNotFinished js cont) -> do
+        mapM_ print js
+        putStr "command>" >> hFlush stdout
+        t <- pCommand <$> getLine
+        go env' (cont t)
+      Left (ComError (CannotApply r js _) cont) -> do
+        putStrLn $ "Cannot apply " ++ show r ++ " to " ++ show js
+        go env' cont
 

@@ -41,16 +41,3 @@ judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
 
   go r js = Left (r,js)
 
-checker :: Env -> Proof -> [Judgement] -> Either (Command, [Judgement]) [Judgement]
-checker env (Proof coms) js = foldl (\m r -> m >>= go r) (Right js) coms where
-  go c [] = Left (c,[])
-  go (Apply rs) js = either (\(r,js) -> Left (Apply [r],js)) Right $ judge env rs js
-  go (Use n) (Judgement assms props : js) = Right $ Judgement (assms S.:|> getEnv env M.! n) props : js
-
-claire :: Env -> Laire -> Either () Env
-claire env (Laire decls) = foldl (\m r -> m >>= go r) (Right env) decls where
-  go (ThmD i fml p) env = case checker env p [Judgement S.empty (S.singleton fml)] of
-    Right [] -> Right $ insertThm i fml env
-    Left p -> error $ show p
-  go (AxiomD i fml) env = Right $ insertThm i fml env
-
