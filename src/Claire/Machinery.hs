@@ -1,10 +1,10 @@
-{-# LANGUAGE GADTs #-}
 module Claire.Machinery where
 
 import Control.Monad.State
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import Control.Monad.Catch
+import Data.Typeable
 import qualified Data.Sequence as S
 import qualified Data.Map as M
 import Claire.Laire
@@ -28,15 +28,15 @@ commandM env = do
   js <- lift get
   unless (null js) $ commandM env
 
-data DeclException
-  = forall c. ProofNotFinished c [Command]
+data DeclException m
+  = ProofNotFinished (Coroutine (Await Command) (StateT [Judgement] m) ()) (StateT Env m ()) [Command] [Judgement]
 
-instance Show DeclException where
-  show (ProofNotFinished c cs) = "ProofNotFinished: " ++ show cs
+instance Show (DeclException m) where
+  show (ProofNotFinished _ _ cs js') = "ProofNotFinished: " ++ show cs ++ " " ++ show js'
 
-instance Exception DeclException
+instance Typeable m => Exception (DeclException m)
 
-toplevelM :: (Monad m, MonadThrow m) => Coroutine (Await Decl) (StateT Env m) ()
+toplevelM :: (Monad m, MonadThrow m, Typeable m) => Coroutine (Await Decl) (StateT Env m) ()
 toplevelM = forever $ do
   decl <- await
   case decl of
@@ -44,10 +44,11 @@ toplevelM = forever $ do
       lift $ modify $ insertThm idx fml
     ThmD idx fml (Proof coms) -> do
       env <- lift get
-      result <- lift $ evalStateT (feeds coms (commandM env)) [Judgement S.empty (S.singleton fml)]
+      (result, js') <- lift $ runStateT (feeds coms (commandM env)) [Judgement S.empty (S.singleton fml)]
+      let fin = modify $ insertThm idx fml
       case result of
-        Right () -> lift $ modify $ insertThm idx fml
-        Left (k,coms) -> lift $ throwM $ ProofNotFinished k coms
+        Right () -> lift fin
+        Left (k,coms) -> lift $ throwM $ ProofNotFinished k (lift fin) coms js'
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where

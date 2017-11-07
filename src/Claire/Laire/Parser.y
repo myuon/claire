@@ -7,6 +7,7 @@ import Claire.Laire.Lexer
 
 %name laireparser
 %name declparser Decl
+%name comparser Command
 %name folparser Formula
 %name termparser Term
 
@@ -75,11 +76,15 @@ Lstmts
   | Decl Lstmts  { $1 : $2 }
 
 Decl
-  : theorem ident ':' Formula proof Commands qed  { ThmD $2 $4 (Proof $6) }
+  : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
 
+Proof
+  : {- empty -}  { Proof [] }
+  | proof Commands qed  { Proof $2 }
+
 Commands
-  : Command  { [$1] }
+  : {- empty -}  { [] }
   | Command Commands  { $1 : $2 }
 
 Command

@@ -5,6 +5,7 @@ module Claire.Laire
   , module Claire.Laire.Syntax
   , pLaire
   , pDecl
+  , pCommand
   , pFormula
   , pTerm
   ) where
@@ -18,6 +19,9 @@ pLaire = laireparser . alexScanTokens
 
 pDecl :: String -> Decl
 pDecl = declparser . alexScanTokens
+
+pCommand :: String -> Command
+pCommand = comparser . alexScanTokens
 
 pFormula :: String -> Formula
 pFormula = folparser . alexScanTokens
