@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 module Claire.Machinery where
 
 import Control.Monad.State.Strict
@@ -36,9 +37,11 @@ instance Show (DeclException m) where
 
 instance Typeable m => Exception (DeclException m)
 
-toplevelM :: (Monad m, MonadThrow m, Typeable m) => Coroutine (Await Decl) (StateT Env m) ()
+data Suspended e x y = Suspended e y | Awaiting (x -> y) deriving Functor
+
+toplevelM :: (Monad m, MonadThrow m, Typeable m) => Coroutine (Suspended (DeclException m) Decl) (StateT Env m) ()
 toplevelM = forever $ do
-  decl <- await
+  decl <- suspend (Awaiting return)
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
@@ -48,7 +51,7 @@ toplevelM = forever $ do
       let fin = modify $ insertThm idx fml
       case result of
         Right () -> lift fin
-        Left (k,coms) -> lift $ lift $ throwM $ ProofNotFinished k fin coms js'
+        Left (k,coms) -> suspend $ Suspended (ProofNotFinished k fin coms js') (return ())
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where

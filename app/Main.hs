@@ -35,17 +35,20 @@ main = do
 clairepl :: Env -> IO ()
 clairepl env = runrepl env toplevelM
 
-runrepl :: Env -> Coroutine (Await Decl) (StateT Env IO) () -> IO ()
+runrepl :: Env -> Coroutine (Suspended (DeclException IO) Decl) (StateT Env IO) () -> IO ()
 runrepl env k = do
   (result,env') <- flip runStateT env $ resume k `catch` \(ProofNotFinished k fin coms js) -> go k fin js
   putStrLn $ "env: " ++ show env'
   
   case result of
     Right () -> runrepl env' k
-    Left (Await k) -> do
+    Left (Awaiting k) -> do
       putStr "decl>" >> hFlush stdout
       t <- pDecl <$> getLine
       runrepl env' (k t)
+    Left (Suspended (ProofNotFinished k fin coms js) cont) -> do
+      env' <- execStateT (go k fin js) env
+      runrepl env' cont
 
   where
     go k fin js = do
