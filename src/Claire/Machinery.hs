@@ -29,15 +29,15 @@ commandM env = do
   js <- lift get
   unless (null js) $ commandM env
 
-data DeclException
-  = ProofNotFinished (Coroutine (Await Command) (StateT [Judgement] IO) ()) (StateT Env IO ()) [Command] [Judgement]
+data DeclException m
+  = ProofNotFinished (Coroutine (Await Command) (StateT [Judgement] m) ()) (StateT Env m ()) [Command] [Judgement]
 
-instance Show (DeclException) where
+instance Show (DeclException m) where
   show (ProofNotFinished _ _ cs js') = "ProofNotFinished: " ++ show cs ++ " " ++ show js'
 
-instance Exception (DeclException)
+instance Typeable m => Exception (DeclException m)
 
-toplevelM :: Coroutine (Await Decl) (StateT Env IO) ()
+toplevelM :: (Monad m, MonadThrow m, Typeable m) => Coroutine (Await Decl) (StateT Env m) ()
 toplevelM = forever $ do
   decl <- await
   case decl of
