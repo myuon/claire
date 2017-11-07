@@ -15,12 +15,13 @@ dependencies:
 - base >= 4.7 && < 5
 - containers >= 0.5.10
 - trifecta
-- parsers
 - lens
 - mtl
+- monad-coroutine
 
 default-extensions:
 - PatternSynonyms
+- Rank2Types
 
 ghc-options:
 - -Wunused-imports
