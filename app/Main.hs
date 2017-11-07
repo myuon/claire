@@ -1,8 +1,10 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE Strict #-}
 module Main where
 
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Monad.Catch
 import qualified Data.Map as M
 import System.IO
