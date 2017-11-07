@@ -1,9 +1,7 @@
 module Main where
 
 import Control.Monad.Coroutine
-import Control.Monad.Coroutine.SuspensionFunctors
 import Control.Monad.State.Strict
-import Control.Monad.Catch
 import qualified Data.Map as M
 import System.IO
 import System.Environment (getArgs)
@@ -35,28 +33,23 @@ main = do
 clairepl :: Env -> IO ()
 clairepl env = runrepl env toplevelM
 
-runrepl :: Env -> Coroutine (Suspended (DeclException IO) Decl) (StateT Env IO) () -> IO ()
+runrepl :: Env -> Coroutine (DeclSuspender IO) (StateT Env IO) () -> IO ()
 runrepl env k = do
-  (result,env') <- flip runStateT env $ resume k `catch` \(ProofNotFinished k fin coms js) -> go k fin js
+  (result,env') <- flip runStateT env $ resume k
   putStrLn $ "env: " ++ show env'
   
   case result of
     Right () -> runrepl env' k
-    Left (Awaiting k) -> do
+    Left (DeclAwait k) -> do
       putStr "decl>" >> hFlush stdout
       t <- pDecl <$> getLine
       runrepl env' (k t)
-    Left (Suspended (ProofNotFinished k fin coms js) cont) -> do
-      env' <- execStateT (go k fin js) env
+    Left (ProofNotFinished js cont) -> do
+      mapM_ print js
+      putStr "command>" >> hFlush stdout
+      t <- pCommand <$> getLine
+      runrepl env' (cont t)
+    Left (ComError (CannotApply r js _) cont) -> do
+      putStrLn $ "Cannot apply " ++ show r ++ " to " ++ show js
       runrepl env' cont
-
-  where
-    go k fin js = do
-      lift $ mapM_ print js
-      lift $ putStr "command>" >> hFlush stdout
-      t <- pCommand <$> lift getLine
-      (result,js') <- lift $ runStateT (feeds [t] k) js
-      case result of
-        Right () -> fmap Right fin
-        Left (k',_) -> go k' fin js'
 

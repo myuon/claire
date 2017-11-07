@@ -1,57 +1,74 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Claire.Machinery where
 
 import Control.Monad.State.Strict
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
-import Control.Monad.Catch
-import Data.Typeable
 import qualified Data.Sequence as S
 import qualified Data.Map as M
 import Claire.Laire
 import Claire.Checker
 
-data CommandException = CannotApply Rule [Judgement] deriving Show
 
-instance Exception CommandException
+data ComSuspender y
+  = ComAwait (Command -> y)
+  | CannotApply Rule [Judgement] y
+  deriving (Functor)
 
-commandM :: (Monad m, MonadThrow m) => Env -> Coroutine (Await Command) (StateT [Judgement] m) ()
+commandM :: (Monad m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
-  com <- await
+  com <- suspend $ ComAwait return
   case com of
-    Apply rs -> lift $ do
-      js <- get
+    Apply rs -> do
+      js <- lift get
       case judge env rs js of
-        Left (r,js') -> lift $ throwM $ CannotApply r js'
-        Right js' -> put js'
+        Left (r,js') -> do
+          suspend $ CannotApply r js' (return ())
+          commandM env
+        Right js' -> lift $ put js'
     Use idx -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> getEnv env M.! idx) props : js
 
   js <- lift get
   unless (null js) $ commandM env
 
-data DeclException m
-  = ProofNotFinished (Coroutine (Await Command) (StateT [Judgement] m) ()) (StateT Env m ()) [Command] [Judgement]
+data DeclSuspender m y
+  = DeclAwait (Decl -> y)
+  | ProofNotFinished [Judgement] (Command -> y)
+  | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
+  deriving (Functor)
 
-instance Show (DeclException m) where
-  show (ProofNotFinished _ _ cs js') = "ProofNotFinished: " ++ show cs ++ " " ++ show js'
-
-instance Typeable m => Exception (DeclException m)
-
-data Suspended e x y = Suspended e y | Awaiting (x -> y) deriving Functor
-
-toplevelM :: (Monad m, MonadThrow m, Typeable m) => Coroutine (Suspended (DeclException m) Decl) (StateT Env m) ()
+toplevelM :: Monad m => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
-  decl <- suspend (Awaiting return)
+  decl <- suspend (DeclAwait return)
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
-    ThmD idx fml (Proof coms) -> do
+    ThmD idx fml (Proof coms) -> runThmD idx fml coms
+  where
+    runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+    runThmD idx fml coms = do
       env <- lift get
-      (result, js') <- lift $ lift $ runStateT (feeds coms (commandM env)) [Judgement S.empty (S.singleton fml)]
-      let fin = modify $ insertThm idx fml
-      case result of
-        Right () -> lift fin
-        Left (k,coms) -> suspend $ Suspended (ProofNotFinished k fin coms js') (return ())
+      go (commandM env) [Judgement S.empty (S.singleton fml)] coms
+      lift $ modify $ insertThm idx fml
+
+      where
+        go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+        go machine js coms = do
+          env <- lift get
+          (result,js') <- lift $ lift $ runStateT (resume machine) js
+          case result of
+            Right () -> return ()
+            Left (ComAwait cont) -> do
+              case coms of
+                [] -> do
+                  com' <- suspend $ ProofNotFinished js' return
+                  go (suspend $ ComAwait cont) js' [com']
+                (c:cs) -> do
+                  go (cont c) js' cs
+            Left (z@(CannotApply _ _ cont)) -> do
+              suspend $ ComError z (return ())
+              go cont js coms
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where
