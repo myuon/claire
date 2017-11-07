@@ -1,4 +1,3 @@
-{-# LANGUAGE Strict #-}
 module Claire.Machinery where
 
 import Control.Monad.State.Strict

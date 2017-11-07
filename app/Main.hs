@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE Strict #-}
 module Main where
 
 import Control.Monad.Coroutine
@@ -39,23 +37,23 @@ clairepl env = runrepl env toplevelM
 
 runrepl :: Env -> Coroutine (Await Decl) (StateT Env IO) () -> IO ()
 runrepl env k = do
-  (result,env') <- runStateT (resume k) env `catch` \(ProofNotFinished k fin coms js) -> go k fin js env
+  (result,env') <- flip runStateT env $ resume k `catch` \(ProofNotFinished k fin coms js) -> go k fin js
   putStrLn $ "env: " ++ show env'
   
   case result of
-    Right () -> return ()
+    Right () -> runrepl env' k
     Left (Await k) -> do
       putStr "decl>" >> hFlush stdout
       t <- pDecl <$> getLine
-
       runrepl env' (k t)
 
   where
-    go k fin js env = do
-      putStr "command>" >> hFlush stdout
-      t <- pCommand <$> getLine
-      (result,js') <- runStateT (feeds [t] k) js
+    go k fin js = do
+      lift $ mapM_ print js
+      lift $ putStr "command>" >> hFlush stdout
+      t <- pCommand <$> lift getLine
+      (result,js') <- lift $ runStateT (feeds [t] k) js
       case result of
-        Right () -> fmap (\(x,y) -> (Right x,y)) $ runStateT fin env
-        Left (k',_) -> go k' fin js' env
+        Right () -> fmap Right fin
+        Left (k',_) -> go k' fin js'
 
