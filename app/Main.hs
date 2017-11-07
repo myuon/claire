@@ -4,7 +4,6 @@ import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import Control.Monad.State
 import Control.Monad.Catch
-import Control.Monad.Except
 import qualified Data.Map as M
 import System.IO
 import System.Environment (getArgs)
@@ -36,12 +35,9 @@ main = do
 clairepl :: Env -> IO ()
 clairepl env = runrepl env toplevelM
 
-type Repl = StateT Env (ExceptT (DeclException IO) IO)
-
-runrepl :: Env -> Coroutine (Await Decl) Repl () -> IO ()
+runrepl :: Env -> Coroutine (Await Decl) (StateT Env IO) () -> IO ()
 runrepl env k = do
-  Right (result,env') <- runExceptT $ do
-    (runStateT (resume k) env) `catch` \(ProofNotFinished k fin coms js) -> lift $ go k fin js env
+  (result,env') <- runStateT (resume k) env `catch` \(ProofNotFinished k fin coms js) -> go k fin js env
   putStrLn $ "env: " ++ show env'
   
   case result of
@@ -58,8 +54,6 @@ runrepl env k = do
       t <- pCommand <$> getLine
       (result,js') <- runStateT (feeds [t] k) js
       case result of
-        Right () -> do
-          env' <- execStateT fin env
-          return $ (Right (), env')
+        Right () -> fmap (\(x,y) -> (Right x,y)) $ runStateT fin env
         Left (k',_) -> go k' fin js' env
 
