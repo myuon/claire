@@ -1,5 +1,5 @@
 name:                claire
-version:             0.4.0.0
+version:             0.4.0.1
 #synopsis:
 #description:
 homepage:            https://github.com/myuon/claire#readme
@@ -47,7 +47,7 @@ library:
   - Claire.Laire.Parser
 
 executables:
-  clairepl:
+  claire:
     source-dirs:      app
     main:             Main.hs
     dependencies:
