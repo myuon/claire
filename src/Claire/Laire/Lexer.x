@@ -35,7 +35,7 @@ tokens :-
   qed      { \s -> TokenQed }
   axiom    { \s -> TokenAxiom }
   datatype { \s -> TokenDatatype }
-  define   { \s -> TokenDefine }
+  defmacro { \s -> TokenDefMacro }
   import   { \s -> TokenImport }
   apply    { \s -> TokenApply }
   use      { \s -> TokenUse }
@@ -64,6 +64,7 @@ tokens :-
   PR       { \s -> TokenPR }
   $digit+  { \s -> TokenNumber (read s) }
   \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
+  ```[^```]*```  { \s -> TokenHaskellCode s }
   $alpha [$alpha $digit \_ \']*      { TokenIdent }
 
 {
@@ -94,6 +95,7 @@ data Token
   | TokenDatatype
   | TokenImport
   | TokenDefine
+  | TokenDefMacro
   | TokenApply
   | TokenUse
   | TokenI
@@ -121,6 +123,7 @@ data Token
   | TokenNumber Int
   | TokenIdent String
   | TokenStrLit String
+  | TokenHaskellCode String
   deriving (Eq, Show)
 }
 

@@ -33,7 +33,7 @@ clairepl env = go env toplevelM where
   go :: Env -> Coroutine (DeclSuspender IO) (StateT Env IO) () -> IO ()
   go env k = do
     (result,env') <- flip runStateT env $ resume k
-    putStrLn $ "env: " ++ show env'
+--    putStrLn $ "env: " ++ show env'
   
     case result of
       Right () -> go env' k

@@ -37,7 +37,7 @@ import Claire.Laire.Lexer
   proof    { TokenProof }
   qed      { TokenQed }
   datatype { TokenDatatype }
-  define   { TokenDefine }
+  defmacro { TokenDefMacro }
   import   { TokenImport }
   apply    { TokenApply }
   use      { TokenUse }
@@ -67,6 +67,7 @@ import Claire.Laire.Lexer
   number   { TokenNumber $$ }
   strlit   { TokenStrLit $$ }
   ident    { TokenIdent $$ }
+  haskell  { TokenHaskellCode $$ }
 
 %right '->'
 %left and or
@@ -75,18 +76,23 @@ import Claire.Laire.Lexer
 %%
 
 Laire
-  : Lstmts  { Laire $1 }
+  : Decls  { Laire $1 }
 
-Lstmts
+Decls
   : {- empty -}  { [] }
-  | Decl Lstmts  { $1 : $2 }
+  | Decl Decls  { $1 : $2 }
 
 Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
-  | datatype Term '=' Constructors  { DataD $2 $4 }
+--  | datatype Term '=' Constructors  { DataD $2 $4 }
   | import strlit  { ImportD $2 }
-  | define ident '=' Formula  { DefD $2 $4 }
+--  | defmacro ident '(' Idents ')' haskell  { DefMacroD $2 $4 $6 }
+
+Idents
+  : {- empty -}  { [] }
+  | ident  { [$1] }
+  | ident ',' Idents { $1 : $3 }
 
 Proof
   : {- empty -}  { Proof [] }

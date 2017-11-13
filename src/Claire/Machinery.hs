@@ -59,7 +59,6 @@ toplevelM = forever $ do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
-    DefD i fml -> lift $ modify $ insertDef i fml
       
   where
     runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()

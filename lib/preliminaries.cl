@@ -1,8 +1,11 @@
-define top' = forall a. a -> a
-define bottom' = forall a. a
+axiom bottom'I: (forall a. a) -> bottom'
+axiom bottom'E: bottom' -> (forall a. a)
 
-theorem absurd: bottom' -> x
+theorem absurd: bottom' -> a
 proof
+  apply ImpR
+  use bottom'E
+  apply (ImpL; PR 1; WR; I; ForallL [a]; PL 0; WL; I)
 qed
 
 theorem id: a -> a

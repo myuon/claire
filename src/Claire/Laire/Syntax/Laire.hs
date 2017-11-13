@@ -18,7 +18,7 @@ data Decl
   | AxiomD ThmIndex Formula
   | DataD Term [Term]
   | ImportD String
-  | DefD Ident Formula
+--  | DefMacroD Ident [Ident] String
   deriving Show
 
 data Proof
