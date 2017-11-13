@@ -47,7 +47,7 @@ library:
   - Claire.Laire.Parser
 
 executables:
-  clairepl:
+  claire:
     source-dirs:      app
     main:             Main.hs
     dependencies:
