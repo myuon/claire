@@ -2,11 +2,10 @@ module Claire.Laire.Syntax.FOL where
 
 import Data.Set as S
 
-type VSymbol = String
-type FSymbol = String
+type Ident = String
 type PSymbol = String
 
-data Term = Var VSymbol | Func FSymbol [Term] deriving (Eq, Show)
+data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
 data Formula
   = Pred PSymbol [Term]
@@ -15,14 +14,14 @@ data Formula
   | Formula :/\: Formula
   | Formula :\/: Formula
   | Formula :->: Formula
-  | Forall VSymbol Formula
-  | Exist VSymbol Formula
+  | Forall Ident Formula
+  | Exist Ident Formula
   deriving (Eq, Show)
 
 pattern Const c = Pred c []
 pattern Neg a = a :->: Bottom
 
-fv :: Formula -> S.Set VSymbol
+fv :: Formula -> S.Set Ident
 fv = go where
   fvt (Var v) = S.singleton v
   fvt (Func _ ts) = S.unions $ fmap fvt ts

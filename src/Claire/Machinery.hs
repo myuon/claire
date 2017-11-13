@@ -31,7 +31,7 @@ commandM env = do
           suspend $ CannotApply r js' (return ())
           commandM env
         Right js' -> lift $ put js'
-    Use idx -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> getEnv env M.! idx) props : js
+    Use idx -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> thms env M.! idx) props : js
 
   js <- lift get
   unless (null js) $ commandM env

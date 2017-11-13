@@ -12,8 +12,8 @@ data Rule
   | OrL | OrR1 | OrR2
   | ImpL | ImpR
   | BottomL | TopR
-  | ForallL Term | ForallR VSymbol
-  | ExistL VSymbol | ExistR Term
+  | ForallL Term | ForallR Ident
+  | ExistL Ident | ExistR Term
   | WL | WR
   | CL | CR
   | PL Int | PR Int

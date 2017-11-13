@@ -1,17 +1,7 @@
 module Claire.Checker where
 
-import qualified Data.Map as M
 import qualified Data.Sequence as S
 import Claire.Laire
-
-newtype Env = Env { getEnv :: M.Map ThmIndex Formula } deriving Show
-
-insertThm :: ThmIndex -> Formula -> Env -> Env
-insertThm idx fml (Env m) = Env $ M.insert idx fml m
-
-defEnv :: Env
-defEnv = Env M.empty
-
 
 judge :: Env -> [Rule] -> [Judgement] -> Either (Rule, [Judgement]) [Judgement]
 judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
