@@ -37,6 +37,7 @@ import Claire.Laire.Lexer
   proof    { TokenProof }
   qed      { TokenQed }
   datatype { TokenDatatype }
+  define   { TokenDefine }
   import   { TokenImport }
   apply    { TokenApply }
   use      { TokenUse }
@@ -85,6 +86,7 @@ Decl
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | datatype Term '=' Constructors  { DataD $2 $4 }
   | import strlit  { ImportD $2 }
+  | define ident '=' Formula  { DefD $2 $4 }
 
 Proof
   : {- empty -}  { Proof [] }

@@ -11,6 +11,7 @@ module Claire.Laire
 
   , Env(..)
   , insertThm
+  , insertDef
   , defEnv
   ) where
 
@@ -38,12 +39,15 @@ pTerm = termparser . alexScanTokens
 data Env
   = Env
   { thms :: M.Map ThmIndex Formula
-  , terms :: M.Map Ident Term
+  , defs :: M.Map Ident Formula
   }
   deriving Show
 
 insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx fml (thms env) }
+
+insertDef :: Ident -> Formula -> Env -> Env
+insertDef idx fml env = env { defs = M.insert idx fml (defs env) }
 
 defEnv :: Env
 defEnv = Env M.empty M.empty

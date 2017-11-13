@@ -1,3 +1,10 @@
+define top' = forall a. a -> a
+define bottom' = forall a. a
+
+theorem absurd: bottom' -> x
+proof
+qed
+
 theorem id: a -> a
 proof
   apply (ImpR; I)
@@ -19,7 +26,7 @@ proof
   apply BottomL
 qed
 
-datatype nat = zero | succ(nat)
+#datatype nat = zero | succ(nat)
 #axiom nat_ind: forall p. forall n. p(zero) -> (forall m. p(m) -> p(succ(m))) -> p(n)
 
 #theorem nat_next: forall n. exist m. eq(n,succ(m))

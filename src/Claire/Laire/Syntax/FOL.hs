@@ -35,12 +35,14 @@ fv = go where
   go (Forall v f) = S.delete v $ fv f
   go (Exist v f) = S.delete v $ fv f
 
-substTerm :: Term -> Term -> Formula -> Formula
-substTerm t t' = go where
-  go (Pred p ts) = Pred p $ go' ts where
-    go' [] = []
-    go' (tm:tms) | tm == t = t' : go' tms
-    go' (tm:tms) = tm : go' tms
+substTerm :: Ident -> Term -> Formula -> Formula
+substTerm idt t' = go where
+  got (Var i)
+    | i == idt = t'
+    | otherwise = Var i
+  got (Func f ts) = Func f $ fmap got ts
+  
+  go (Pred p ts) = Pred p $ fmap got ts
   go Top = Top
   go Bottom = Bottom
   go (f1 :/\: f2) = go f1 :/\: go f2

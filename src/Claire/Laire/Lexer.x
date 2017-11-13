@@ -35,6 +35,7 @@ tokens :-
   qed      { \s -> TokenQed }
   axiom    { \s -> TokenAxiom }
   datatype { \s -> TokenDatatype }
+  define   { \s -> TokenDefine }
   import   { \s -> TokenImport }
   apply    { \s -> TokenApply }
   use      { \s -> TokenUse }
@@ -92,6 +93,7 @@ data Token
   | TokenAxiom
   | TokenDatatype
   | TokenImport
+  | TokenDefine
   | TokenApply
   | TokenUse
   | TokenI

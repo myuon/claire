@@ -17,10 +17,10 @@ judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
   go ImpR (Judgement assms ((fa :->: fb) S.:<| props) : js) = Right $ Judgement (assms S.:|> fa) (fb S.:<| props) : js
   go BottomL (Judgement (assms S.:|> Bottom) props : js) = Right js
   go TopR (Judgement assms (Top S.:<| props) : js) = Right js
-  go (ForallL t) (Judgement (assms S.:|> Forall x fml) props : js) = Right $ Judgement (assms S.:|> substTerm (Var x) t fml) props : js
-  go (ForallR y) (Judgement assms (Forall x fml S.:<| props) : js) = Right $ Judgement assms (substTerm (Var x) (Var y) fml S.:<| props) : js
-  go (ExistL y) (Judgement (assms S.:|> Exist x fml) props : js) = Right $ Judgement (assms S.:|> substTerm (Var x) (Var y) fml) props : js
-  go (ExistR t) (Judgement assms (Exist x fml S.:<| props) : js) = Right $ Judgement assms (substTerm (Var x) t fml S.:<| props) : js
+  go (ForallL t) (Judgement (assms S.:|> Forall x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x t fml) props : js
+  go (ForallR y) (Judgement assms (Forall x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x (Var y) fml S.:<| props) : js
+  go (ExistL y) (Judgement (assms S.:|> Exist x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x (Var y) fml) props : js
+  go (ExistR t) (Judgement assms (Exist x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x t fml S.:<| props) : js
 
   go WL (Judgement (assms S.:|> _) props : js) = Right $ Judgement assms props : js
   go WR (Judgement assms (_ S.:<| props) : js) = Right $ Judgement assms props : js
