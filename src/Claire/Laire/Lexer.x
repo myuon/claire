@@ -11,11 +11,11 @@ $alpha = [a-zA-Z]
 tokens :-
   $white+  ;
   "#".*    ;
-  forall   { \s -> TokenForall }
-  exist    { \s -> TokenExist }
-  top      { \s -> TokenTop }
-  bottom   { \s -> TokenBottom }
-  "->"     { \s -> TokenArrow }
+  Forall   { \s -> TokenForall }
+  Exist    { \s -> TokenExist }
+  Top      { \s -> TokenTop }
+  Bottom   { \s -> TokenBottom }
+  "==>"    { \s -> TokenArrow }
   "\/"     { \s -> TokenOr }
   "/\"     { \s -> TokenAnd }
   "."      { \s -> TokenDot }
@@ -34,8 +34,6 @@ tokens :-
   proof    { \s -> TokenProof }
   qed      { \s -> TokenQed }
   axiom    { \s -> TokenAxiom }
-  datatype { \s -> TokenDatatype }
-  defmacro { \s -> TokenDefMacro }
   import   { \s -> TokenImport }
   apply    { \s -> TokenApply }
   use      { \s -> TokenUse }
@@ -92,10 +90,7 @@ data Token
   | TokenProof
   | TokenQed
   | TokenAxiom
-  | TokenDatatype
   | TokenImport
-  | TokenDefine
-  | TokenDefMacro
   | TokenApply
   | TokenUse
   | TokenI

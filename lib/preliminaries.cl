@@ -1,19 +1,10 @@
-axiom bottom'E: bottom' -> (forall a. a)
-
-theorem absurd': bottom' -> a
-proof
-  apply ImpR
-  use bottom'E
-  apply (ImpL; PR 1; WR; I; ForallL [a]; PL 0; WL; I)
-qed
-
-theorem id: a -> a
+theorem id: a ==> a
 proof
   apply (ImpR; I)
 qed
 
 # lemmas for LK
-theorem deMorgan: forall p. forall q. ~ (p /\ q) -> (~p \/ ~q)
+theorem deMorgan: Forall p. Forall q. (p /\ q ==> Bottom) ==> ((p ==> Bottom) \/ (q ==> Bottom))
 proof
   apply (ForallR p; ForallR q)
   apply (ImpR; ImpL; AndR)

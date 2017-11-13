@@ -54,7 +54,6 @@ toplevelM = forever $ do
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
     ThmD idx fml (Proof coms) -> runThmD idx fml coms
-    DataD t ts -> return ()
     ImportD path -> do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
@@ -65,7 +64,7 @@ toplevelM = forever $ do
     runThmD idx fml coms = do
       env <- lift get
       go (commandM env) [Judgement S.empty (S.singleton fml)] coms
-      lift $ modify $ insertThm idx fml
+      lift $ modify $ insertThm idx $ generalize fml
 
       where
         go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()

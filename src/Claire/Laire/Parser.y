@@ -18,7 +18,7 @@ import Claire.Laire.Lexer
   exist    { TokenExist }
   top      { TokenTop }
   bottom   { TokenBottom }
-  '->'     { TokenArrow }
+  '==>'    { TokenArrow }
   and      { TokenAnd }
   or       { TokenOr }
   '.'      { TokenDot }
@@ -36,8 +36,6 @@ import Claire.Laire.Lexer
   axiom    { TokenAxiom }
   proof    { TokenProof }
   qed      { TokenQed }
-  datatype { TokenDatatype }
-  defmacro { TokenDefMacro }
   import   { TokenImport }
   apply    { TokenApply }
   use      { TokenUse }
@@ -141,7 +139,7 @@ Rule
   | PR number  { PR $2 }
 
 Formula
-  : Formula '->' Formula      { $1 :->: $3 }
+  : Formula '==>' Formula     { $1 :==>: $3 }
   | forall ident '.' Formula  { Forall $2 $4 }
   | exist ident '.' Formula   { Exist $2 $4 }
   | Formula or Formula        { $1 :\/: $3 }
