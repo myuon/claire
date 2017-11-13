@@ -16,8 +16,8 @@ tokens :-
   top      { \s -> TokenTop }
   bottom   { \s -> TokenBottom }
   "->"     { \s -> TokenArrow }
-  "\/"    { \s -> TokenOr }
-  "/\"    { \s -> TokenAnd }
+  "\/"     { \s -> TokenOr }
+  "/\"     { \s -> TokenAnd }
   "."      { \s -> TokenDot }
   ","      { \s -> TokenComma }
   "("      { \s -> TokenLParen }
@@ -28,10 +28,14 @@ tokens :-
   [\n]     { \s -> TokenNewline }
   ":"      { \s -> TokenColon }
   ";"      { \s -> TokenSemicolon }
+  "|"	   { \s -> TokenHBar }
+  "="	   { \s -> TokenEqual }
   theorem  { \s -> TokenTheorem }
   proof    { \s -> TokenProof }
   qed      { \s -> TokenQed }
   axiom    { \s -> TokenAxiom }
+  datatype { \s -> TokenDatatype }
+  import   { \s -> TokenImport }
   apply    { \s -> TokenApply }
   use      { \s -> TokenUse }
   Cut      { \s -> TokenCut }
@@ -58,6 +62,7 @@ tokens :-
   PL       { \s -> TokenPL }
   PR       { \s -> TokenPR }
   $digit+  { \s -> TokenNumber (read s) }
+  \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
   $alpha [$alpha $digit \_ \']*      { TokenIdent }
 
 {
@@ -79,10 +84,14 @@ data Token
   | TokenNewline
   | TokenColon
   | TokenSemicolon
+  | TokenHBar
+  | TokenEqual
   | TokenTheorem
   | TokenProof
   | TokenQed
   | TokenAxiom
+  | TokenDatatype
+  | TokenImport
   | TokenApply
   | TokenUse
   | TokenI
@@ -109,6 +118,7 @@ data Token
   | TokenPR
   | TokenNumber Int
   | TokenIdent String
+  | TokenStrLit String
   deriving (Eq, Show)
 }
 

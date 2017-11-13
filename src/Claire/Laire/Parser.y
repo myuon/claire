@@ -30,10 +30,14 @@ import Claire.Laire.Lexer
   '~'      { TokenTilda }
   ':'      { TokenColon }
   ';'      { TokenSemicolon }
+  '|'      { TokenHBar }
+  '='	   { TokenEqual }
   theorem  { TokenTheorem }
   axiom    { TokenAxiom }
   proof    { TokenProof }
   qed      { TokenQed }
+  datatype { TokenDatatype }
+  import   { TokenImport }
   apply    { TokenApply }
   use      { TokenUse }
   I        { TokenI }
@@ -60,6 +64,7 @@ import Claire.Laire.Lexer
   PR       { TokenPR }
   newline  { TokenNewline }
   number   { TokenNumber $$ }
+  strlit   { TokenStrLit $$ }
   ident    { TokenIdent $$ }
 
 %right '->'
@@ -78,10 +83,17 @@ Lstmts
 Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
+  | datatype Term '=' Constructors  { DataD $2 $4 }
+  | import strlit  { ImportD $2 }
 
 Proof
   : {- empty -}  { Proof [] }
   | proof Commands qed  { Proof $2 }
+
+Constructors
+  : {- empty -}  { [] }
+  | Term  { [$1] }
+  | Term '|' Constructors  { $1 : $3 }
 
 Commands
   : {- empty -}  { [] }

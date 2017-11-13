@@ -14,12 +14,7 @@ main = do
     True -> do
       p <- readFile (head xs)
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
-      seq env $ mapM_ putStrLn $
-        [ "==========="
-        , "=== QED ==="
-        , "==========="
-        , ""
-        ]
+      putStrLn "= Proved Theorems ="
       mapM_ print $ M.assocs $ getEnv env
     False -> do
       mapM_ putStrLn $
@@ -28,20 +23,8 @@ main = do
         , "========================="
         , ""
         ]
-      clairepl defEnv
-
-claire :: Env -> [Decl] -> IO Env
-claire = go toplevelM where
-  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
-  go machine env decls = do
-    (result,env') <- flip runStateT env (resume machine)
-    case result of
-      Left (DeclAwait cont) -> case decls of
-        [] -> return env'
-        (d:ds) -> go (cont d) env' ds
-      Left z -> do
-        print z
-        return env'
+      env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile "lib/preliminaries.cl"
+      clairepl env
 
 clairepl :: Env -> IO ()
 clairepl env = go env toplevelM where

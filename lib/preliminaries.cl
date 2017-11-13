@@ -19,4 +19,8 @@ proof
   apply BottomL
 qed
 
+datatype nat = zero | succ(nat)
+#axiom nat_ind: forall p. forall n. p(zero) -> (forall m. p(m) -> p(succ(m))) -> p(n)
+
+#theorem nat_next: forall n. exist m. eq(n,succ(m))
 

@@ -16,6 +16,8 @@ data Command
 data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
+  | DataD Term [Term]
+  | ImportD String
   deriving Show
 
 data Proof

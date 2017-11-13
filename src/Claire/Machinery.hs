@@ -47,13 +47,18 @@ instance Show (DeclSuspender m y) where
   show (ProofNotFinished js _) = "ProofNotFinished: " ++ show js
   show (ComError e _) = "ComError: " ++ show e
 
-toplevelM :: Monad m => Coroutine (DeclSuspender m) (StateT Env m) ()
+toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
   decl <- suspend (DeclAwait return)
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
     ThmD idx fml (Proof coms) -> runThmD idx fml coms
+    DataD t ts -> return ()
+    ImportD path -> do
+      env <- lift get
+      env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
+      lift $ put $ env'
   where
     runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
     runThmD idx fml coms = do
@@ -78,6 +83,19 @@ toplevelM = forever $ do
             Left (z@(CannotApply _ _ cont)) -> do
               suspend $ ComError z (return ())
               go cont js coms
+
+claire :: Env -> [Decl] -> IO Env
+claire = go toplevelM where
+  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
+  go machine env decls = do
+    (result,env') <- flip runStateT env (resume machine)
+    case result of
+      Left (DeclAwait cont) -> case decls of
+        [] -> return env'
+        (d:ds) -> go (cont d) env' ds
+      Left z -> do
+        print z
+        return env'
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where
