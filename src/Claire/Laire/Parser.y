@@ -67,7 +67,7 @@ import Claire.Laire.Lexer
   ident    { TokenIdent $$ }
   haskell  { TokenHaskellCode $$ }
 
-%right '->'
+%right '==>'
 %left and or
 %nonassoc '~'
 
@@ -83,9 +83,7 @@ Decls
 Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
---  | datatype Term '=' Constructors  { DataD $2 $4 }
   | import strlit  { ImportD $2 }
---  | defmacro ident '(' Idents ')' haskell  { DefMacroD $2 $4 $6 }
 
 Idents
   : {- empty -}  { [] }

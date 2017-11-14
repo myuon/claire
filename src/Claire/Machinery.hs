@@ -64,7 +64,7 @@ toplevelM = forever $ do
     runThmD idx fml coms = do
       env <- lift get
       go (commandM env) [Judgement S.empty (S.singleton fml)] coms
-      lift $ modify $ insertThm idx $ generalize fml
+      lift $ modify $ insertThm idx $ metagen env fml
 
       where
         go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
