@@ -3,12 +3,11 @@ module Claire.Laire.Syntax.FOL where
 import qualified Data.Set as S
 
 type Ident = String
-type PSymbol = String
 
 data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
 data Formula
-  = Pred PSymbol [Term]
+  = Pred Ident [Term]
   | Top
   | Bottom
   | Formula :/\: Formula
@@ -51,6 +50,19 @@ substTerm idt t' = go where
   go (Forall x fml) = Forall x (go fml)
   go (Exist x fml) = Exist x (go fml)
 
+substPred :: Ident -> Formula -> Formula -> Formula
+substPred idt pred = go where
+  go (z@(Pred _ _))
+    | z == Pred idt [] = pred
+    | otherwise = z
+  go Top = Top
+  go Bottom = Bottom
+  go (fml1 :/\: fml2) = go fml1 :/\: go fml2
+  go (fml1 :\/: fml2) = go fml1 :\/: go fml2
+  go (fml1 :==>: fml2) = go fml1 :==>: go fml2
+  go (Forall v fml) = Forall v (go fml)
+  go (Exist v fml) = Exist v (go fml)
+    
 generalize :: Formula -> Formula
 generalize fml = S.foldl (\f i -> Forall i f) fml (fv fml)
 

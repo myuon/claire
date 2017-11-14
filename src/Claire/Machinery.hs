@@ -6,6 +6,7 @@ import Control.Monad.State.Strict
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
+import qualified Data.Set as Set
 import qualified Data.Map as M
 import Claire.Laire
 import Claire.Checker
@@ -31,7 +32,11 @@ commandM env = do
           suspend $ CannotApply r js' (return ())
           commandM env
         Right js' -> lift $ put js'
-    Use idx -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> thms env M.! idx) props : js
+    Use idx args -> do
+      let rfml = thms env M.! idx
+      let fps = fp env rfml
+      let fml = foldl (\fml (i,f) -> substPred i f fml) rfml (zip (Set.toList fps) args)
+      lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
 
   js <- lift get
   unless (null js) $ commandM env

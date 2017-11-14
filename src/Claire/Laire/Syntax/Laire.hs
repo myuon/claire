@@ -10,7 +10,7 @@ data Laire = Laire [Decl]
 
 data Command
   = Apply [Rule]
-  | Use ThmIndex
+  | Use ThmIndex [Formula]
   deriving (Show)
 
 data Decl

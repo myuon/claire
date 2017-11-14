@@ -106,7 +106,12 @@ Commands
 Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
-  | use ident  { Use $2 }
+  | use ident '[' Formulas ']'  { Use $2 $4 }
+
+Formulas
+  : {- empty -}  { [] }
+  | Formula  { [$1] }
+  | Formula ',' Formulas  { $1 : $3 }
 
 Rules
   : Rule  { [$1] }

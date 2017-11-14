@@ -55,7 +55,7 @@ insertDef idx fml env = env { defs = M.insert idx fml (defs env) }
 defEnv :: Env
 defEnv = Env M.empty M.empty
 
-fp :: Env -> Formula -> S.Set PSymbol
+fp :: Env -> Formula -> S.Set Ident
 fp env = go where
   go (Pred p ts)
     | p `elem` M.keys (defs env) = S.empty
