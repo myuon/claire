@@ -23,6 +23,7 @@ dependencies:
 default-extensions:
 - PatternSynonyms
 - Rank2Types
+- TypeApplications
 
 ghc-options:
 - -Wunused-imports

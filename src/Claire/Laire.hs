@@ -11,16 +11,17 @@ module Claire.Laire
 
   , Env(..)
   , insertThm
+  , print_proof
   , defEnv
   , fp
   , metagen
   ) where
 
+import qualified Data.Map as M
+import qualified Data.Set as S
 import Claire.Laire.Syntax
 import Claire.Laire.Lexer
 import Claire.Laire.Parser
-import qualified Data.Map as M
-import qualified Data.Set as S
 
 pLaire :: String -> Laire
 pLaire = laireparser . alexScanTokens
@@ -42,6 +43,7 @@ data Env
   = Env
   { thms :: M.Map ThmIndex Formula
   , preds :: M.Map Ident Int
+  , proof :: [(Command, String)]
   }
   deriving Show
 
@@ -49,7 +51,18 @@ insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
 
 defEnv :: Env
-defEnv = Env M.empty M.empty
+defEnv = Env M.empty M.empty []
+
+print_proof :: Env -> String
+print_proof env = unlines $
+  [ "= proof of the previous theorem ="
+  , "proof" ]
+  ++ map (\x -> "  " ++ snd x) (filter (not . ignore . fst) $ proof env)
+  ++ [ "qed" ]
+
+  where
+    ignore (NoApply _) = True
+    ignore _ = False
 
 fp :: Env -> Formula -> S.Set Ident
 fp env = go where

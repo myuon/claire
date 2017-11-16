@@ -24,7 +24,7 @@ instance Show (ComSuspender y) where
   show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
   show (CannotInstantiate err _) = show err
 
-commandM :: (Monad m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
+commandM :: (Monad m, MonadIO m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
   com <- suspend $ ComAwait return
   case com of
@@ -35,6 +35,16 @@ commandM env = do
           suspend $ CannotApply r js' (return ())
           commandM env
         Right js' -> lift $ put js'
+    NoApply r -> do
+      js <- lift get
+      case judge env [r] js of
+        Left (r,js') -> do
+          suspend $ CannotApply r js' (return ())
+          commandM env
+        Right js' -> do
+          liftIO $ putStrLn $ "= NoApply " ++ show r ++ " result"
+          liftIO $ mapM_ print js'
+          liftIO $ putStrLn $ "=\n"
     Use idx args -> do
       let rfml = thms env M.! idx
       let fps = fp env rfml
@@ -70,7 +80,9 @@ toplevelM = forever $ do
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
-    ThmD idx fml (Proof coms) -> runThmD idx fml coms
+    ThmD idx fml (Proof coms) -> do
+      lift $ modify $ \env -> env { proof = [] }
+      runThmD idx fml coms
     ImportD path -> do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
@@ -81,10 +93,14 @@ toplevelM = forever $ do
       case fml of
         Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p (length ts) (preds env) }
         z -> suspend $ IllegalPredicateDeclaration z (return ())
-        
+    PrintProof -> do
+      env <- lift get
+      liftIO $ putStrLn $ print_proof env
+
   where
-    runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+    runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
     runThmD idx fml coms = do
+      lift $ modify $ \env -> env { proof = [] }
       env <- lift get
       go (commandM env) (newGoal fml) coms
       lift $ modify $ insertThm idx fml

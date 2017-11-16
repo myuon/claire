@@ -38,7 +38,9 @@ tokens :-
   axiom     { \s -> TokenAxiom }
   import    { \s -> TokenImport }
   predicate { \s -> TokenPredicate }
+  "print_proof"  { \s -> TokenPrintProof }
   apply     { \s -> TokenApply }
+  noapply   { \s -> TokenNoApply }
   use       { \s -> TokenUse }
   inst	    { \s -> TokenInst }
   Cut       { \s -> TokenCut }
@@ -97,8 +99,10 @@ data Token
   | TokenQed
   | TokenAxiom
   | TokenPredicate
+  | TokenPrintProof
   | TokenImport
   | TokenApply
+  | TokenNoApply
   | TokenUse
   | TokenInst
   | TokenI

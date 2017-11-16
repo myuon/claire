@@ -40,7 +40,9 @@ import Claire.Laire.Lexer
   qed       { TokenQed }
   import    { TokenImport }
   predicate { TokenPredicate }
+  print_proof  { TokenPrintProof }
   apply     { TokenApply }
+  noapply   { TokenNoApply }
   use       { TokenUse }
   inst	    { TokenInst }
   I         { TokenI }
@@ -91,6 +93,7 @@ Decl
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | import strlit  { ImportD $2 }
   | predicate Formula  { PredD $2 }
+  | print_proof  { PrintProof }
 
 Proof
   : {- empty -}  { Proof [] }
@@ -108,6 +111,7 @@ Commands
 Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
+  | noapply Rule  { NoApply $2 }
   | use ident '[' Predicates ']'  { Use $2 $4 }
   | inst ident '[' Predicate ']'  { Inst $2 $4 }
 
@@ -132,7 +136,7 @@ Idents
 
 Rules
   : Rule  { [$1] }
-  | Rule ';' Rules  { $1 : $3 }
+  | Rule ',' Rules  { $1 : $3 }
 
 Rule
   : I  { I }

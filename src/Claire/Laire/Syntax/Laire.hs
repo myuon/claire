@@ -12,6 +12,7 @@ data Command
   = Apply [Rule]
   | Use ThmIndex [Maybe Predicate]
   | Inst Ident Predicate
+  | NoApply Rule
   deriving (Show)
 
 data Decl
@@ -19,6 +20,7 @@ data Decl
   | AxiomD ThmIndex Formula
   | ImportD String
   | PredD Formula
+  | PrintProof
   deriving Show
 
 data Proof
