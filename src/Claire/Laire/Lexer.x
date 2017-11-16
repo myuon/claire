@@ -9,55 +9,64 @@ $digit = [0-9]
 $alpha = [a-zA-Z]
 
 tokens :-
-  $white+  ;
-  "#".*    ;
-  forall   { \s -> TokenForall }
-  exist    { \s -> TokenExist }
-  top      { \s -> TokenTop }
-  bottom   { \s -> TokenBottom }
-  "->"     { \s -> TokenArrow }
-  "\/"    { \s -> TokenOr }
-  "/\"    { \s -> TokenAnd }
-  "."      { \s -> TokenDot }
-  ","      { \s -> TokenComma }
-  "("      { \s -> TokenLParen }
-  ")"      { \s -> TokenRParen }
-  "["      { \s -> TokenLBracket }
-  "]"      { \s -> TokenRBracket }
-  "~"      { \s -> TokenTilda }
-  [\n]     { \s -> TokenNewline }
-  ":"      { \s -> TokenColon }
-  ";"      { \s -> TokenSemicolon }
-  theorem  { \s -> TokenTheorem }
-  proof    { \s -> TokenProof }
-  qed      { \s -> TokenQed }
-  axiom    { \s -> TokenAxiom }
-  apply    { \s -> TokenApply }
-  use      { \s -> TokenUse }
-  Cut      { \s -> TokenCut }
-  I        { \s -> TokenI }
-  Cut      { \s -> TokenCut }
-  AndL1    { \s -> TokenAndL1 }
-  AndL2    { \s -> TokenAndL2 }
-  AndR     { \s -> TokenAndR }
-  OrL      { \s -> TokenOrL }
-  OrR1     { \s -> TokenOrR1 }
-  OrR2     { \s -> TokenOrR2 }
-  ImpL     { \s -> TokenImpL }
-  ImpR     { \s -> TokenImpR }
-  BottomL  { \s -> TokenBottomL }
-  TopR     { \s -> TokenTopR }
-  ForallL  { \s -> TokenForallL }
-  ForallR  { \s -> TokenForallR }
-  ExistL   { \s -> TokenExistL }
-  ExistR   { \s -> TokenExistR }
-  WL       { \s -> TokenWL }
-  WR       { \s -> TokenWR }
-  CL       { \s -> TokenCL }
-  CR       { \s -> TokenCR }
-  PL       { \s -> TokenPL }
-  PR       { \s -> TokenPR }
-  $digit+  { \s -> TokenNumber (read s) }
+  $white+   ;
+  "#".*     ;
+  Forall    { \s -> TokenForall }
+  Exist     { \s -> TokenExist }
+  Top       { \s -> TokenTop }
+  Bottom    { \s -> TokenBottom }
+  "==>"     { \s -> TokenArrow }
+  "=>"	    { \s -> TokenFun }
+  "\/"      { \s -> TokenOr }
+  "/\"      { \s -> TokenAnd }
+  "."       { \s -> TokenDot }
+  ","       { \s -> TokenComma }
+  "("       { \s -> TokenLParen }
+  ")"       { \s -> TokenRParen }
+  "["       { \s -> TokenLBracket }
+  "]"       { \s -> TokenRBracket }
+  "~"       { \s -> TokenTilda }
+  [\n]      { \s -> TokenNewline }
+  ":"       { \s -> TokenColon }
+  ";"       { \s -> TokenSemicolon }
+  "|"	    { \s -> TokenHBar }
+  "="	    { \s -> TokenEqual }
+  "_"	    { \s -> TokenUnderscore }
+  theorem   { \s -> TokenTheorem }
+  proof     { \s -> TokenProof }
+  qed       { \s -> TokenQed }
+  axiom     { \s -> TokenAxiom }
+  import    { \s -> TokenImport }
+  predicate { \s -> TokenPredicate }
+  apply     { \s -> TokenApply }
+  use       { \s -> TokenUse }
+  inst	    { \s -> TokenInst }
+  Cut       { \s -> TokenCut }
+  I         { \s -> TokenI }
+  Cut       { \s -> TokenCut }
+  AndL1     { \s -> TokenAndL1 }
+  AndL2     { \s -> TokenAndL2 }
+  AndR      { \s -> TokenAndR }
+  OrL       { \s -> TokenOrL }
+  OrR1      { \s -> TokenOrR1 }
+  OrR2      { \s -> TokenOrR2 }
+  ImpL      { \s -> TokenImpL }
+  ImpR      { \s -> TokenImpR }
+  BottomL   { \s -> TokenBottomL }
+  TopR      { \s -> TokenTopR }
+  ForallL   { \s -> TokenForallL }
+  ForallR   { \s -> TokenForallR }
+  ExistL    { \s -> TokenExistL }
+  ExistR    { \s -> TokenExistR }
+  WL        { \s -> TokenWL }
+  WR        { \s -> TokenWR }
+  CL        { \s -> TokenCL }
+  CR        { \s -> TokenCR }
+  PL        { \s -> TokenPL }
+  PR        { \s -> TokenPR }
+  $digit+   { \s -> TokenNumber (read s) }
+  \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
+  ```[^```]*```  { \s -> TokenHaskellCode s }
   $alpha [$alpha $digit \_ \']*      { TokenIdent }
 
 {
@@ -79,12 +88,19 @@ data Token
   | TokenNewline
   | TokenColon
   | TokenSemicolon
+  | TokenHBar
+  | TokenEqual
+  | TokenUnderscore
+  | TokenFun
   | TokenTheorem
   | TokenProof
   | TokenQed
   | TokenAxiom
+  | TokenPredicate
+  | TokenImport
   | TokenApply
   | TokenUse
+  | TokenInst
   | TokenI
   | TokenCut
   | TokenAndL1
@@ -109,6 +125,8 @@ data Token
   | TokenPR
   | TokenNumber Int
   | TokenIdent String
+  | TokenStrLit String
+  | TokenHaskellCode String
   deriving (Eq, Show)
 }
 

@@ -12,8 +12,8 @@ data Rule
   | OrL | OrR1 | OrR2
   | ImpL | ImpR
   | BottomL | TopR
-  | ForallL Term | ForallR VSymbol
-  | ExistL VSymbol | ExistR Term
+  | ForallL Term | ForallR Ident
+  | ExistL Ident | ExistR Term
   | WL | WR
   | CL | CR
   | PL Int | PR Int
@@ -24,4 +24,6 @@ data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
 instance Show Judgement where
   show (Judgement assms prop) = show (toList assms) ++ " |- " ++ show prop
 
+formulize :: Judgement -> Formula
+formulize (Judgement assms props) = foldl (:/\:) Top assms :==>: foldl (:\/:) Bottom props
 

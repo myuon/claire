@@ -10,16 +10,18 @@ data Laire = Laire [Decl]
 
 data Command
   = Apply [Rule]
-  | Use ThmIndex
+  | Use ThmIndex [Maybe Predicate]
+  | Inst Ident Predicate
   deriving (Show)
 
 data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
+  | ImportD String
+  | PredD Formula
   deriving Show
 
 data Proof
   = Proof [Command]
   deriving Show
-
 

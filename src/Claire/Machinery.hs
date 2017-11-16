@@ -3,9 +3,11 @@
 module Claire.Machinery where
 
 import Control.Monad.State.Strict
+import Control.Monad.Catch
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
+import qualified Data.Set as Set
 import qualified Data.Map as M
 import Claire.Laire
 import Claire.Checker
@@ -14,11 +16,13 @@ import Claire.Checker
 data ComSuspender y
   = ComAwait (Command -> y)
   | CannotApply Rule [Judgement] y
+  | CannotInstantiate SomeException y
   deriving (Functor)
 
 instance Show (ComSuspender y) where
   show (ComAwait _) = "ComAwait"
   show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
+  show (CannotInstantiate err _) = show err
 
 commandM :: (Monad m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
@@ -31,7 +35,19 @@ commandM env = do
           suspend $ CannotApply r js' (return ())
           commandM env
         Right js' -> lift $ put js'
-    Use idx -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> getEnv env M.! idx) props : js
+    Use idx args -> do
+      let rfml = thms env M.! idx
+      let fps = fp env rfml
+      let fml = either (error . show) id $ foldl (\fml (i,mf) -> fml >>= \u -> maybe fml (\f -> substPred i f u) mf) (return rfml) (zip (Set.toList fps) args)
+      lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
+    Inst idt pred -> do
+      js <- lift get
+      case js of
+        [] -> suspend $ CannotInstantiate (error "empty judgement") (return ())
+        (Judgement (assms S.:|> assm) props : js') -> do
+          case substPred ('?':idt) pred assm of
+            Right r -> lift $ put $ Judgement (assms S.:|> r) props : js'
+            Left err -> suspend $ CannotInstantiate err (return ())
 
   js <- lift get
   unless (null js) $ commandM env
@@ -39,6 +55,7 @@ commandM env = do
 data DeclSuspender m y
   = DeclAwait (Decl -> y)
   | ProofNotFinished [Judgement] (Command -> y)
+  | IllegalPredicateDeclaration Formula y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -47,18 +64,29 @@ instance Show (DeclSuspender m y) where
   show (ProofNotFinished js _) = "ProofNotFinished: " ++ show js
   show (ComError e _) = "ComError: " ++ show e
 
-toplevelM :: Monad m => Coroutine (DeclSuspender m) (StateT Env m) ()
+toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
   decl <- suspend (DeclAwait return)
   case decl of
     AxiomD idx fml -> do
       lift $ modify $ insertThm idx fml
     ThmD idx fml (Proof coms) -> runThmD idx fml coms
+    ImportD path -> do
+      env <- lift get
+      env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
+      lift $ put $ env'
+    PredD fml -> do
+      let isVar (Var _) = True
+          isVar _ = False
+      case fml of
+        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p (length ts) (preds env) }
+        z -> suspend $ IllegalPredicateDeclaration z (return ())
+        
   where
     runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
     runThmD idx fml coms = do
       env <- lift get
-      go (commandM env) [Judgement S.empty (S.singleton fml)] coms
+      go (commandM env) (newGoal fml) coms
       lift $ modify $ insertThm idx fml
 
       where
@@ -78,6 +106,22 @@ toplevelM = forever $ do
             Left (z@(CannotApply _ _ cont)) -> do
               suspend $ ComError z (return ())
               go cont js coms
+            Left (z@(CannotInstantiate _ cont)) -> do
+              suspend $ ComError z (return ())
+              go cont js coms
+
+claire :: Env -> [Decl] -> IO Env
+claire = go toplevelM where
+  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
+  go machine env decls = do
+    (result,env') <- flip runStateT env (resume machine)
+    case result of
+      Left (DeclAwait cont) -> case decls of
+        [] -> return env'
+        (d:ds) -> go (cont d) env' ds
+      Left z -> do
+        print z
+        return env'
 
 feeds :: Monad m => [i] -> Coroutine (Await i) m a -> m (Either (Coroutine (Await i) m a , [i]) a)
 feeds = go where

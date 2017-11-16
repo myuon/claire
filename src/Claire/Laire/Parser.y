@@ -14,74 +14,92 @@ import Claire.Laire.Lexer
 %tokentype { Token }
 
 %token
-  forall   { TokenForall }
-  exist    { TokenExist }
-  top      { TokenTop }
-  bottom   { TokenBottom }
-  '->'     { TokenArrow }
-  and      { TokenAnd }
-  or       { TokenOr }
-  '.'      { TokenDot }
-  ','      { TokenComma }
-  ')'      { TokenRParen }
-  '('      { TokenLParen }
-  ']'      { TokenRBracket }
-  '['      { TokenLBracket }
-  '~'      { TokenTilda }
-  ':'      { TokenColon }
-  ';'      { TokenSemicolon }
-  theorem  { TokenTheorem }
-  axiom    { TokenAxiom }
-  proof    { TokenProof }
-  qed      { TokenQed }
-  apply    { TokenApply }
-  use      { TokenUse }
-  I        { TokenI }
-  Cut      { TokenCut }
-  AndL1    { TokenAndL1 }
-  AndL2    { TokenAndL2 }
-  AndR     { TokenAndR }
-  OrL      { TokenOrL }
-  OrR1     { TokenOrR1 }
-  OrR2     { TokenOrR2 }
-  ImpL     { TokenImpL }
-  ImpR     { TokenImpR }
-  BottomL  { TokenBottomL }
-  TopR     { TokenTopR }
-  ForallL  { TokenForallL }
-  ForallR  { TokenForallR }
-  ExistL   { TokenExistL }
-  ExistR   { TokenExistR }
-  WL       { TokenWL }
-  WR       { TokenWR }
-  CL       { TokenCL }
-  CR       { TokenCR }
-  PL       { TokenPL }
-  PR       { TokenPR }
-  newline  { TokenNewline }
-  number   { TokenNumber $$ }
-  ident    { TokenIdent $$ }
+  forall    { TokenForall }
+  exist     { TokenExist }
+  top       { TokenTop }
+  bottom    { TokenBottom }
+  '==>'     { TokenArrow }
+  '=>'      { TokenFun }
+  and       { TokenAnd }
+  or        { TokenOr }
+  '.'       { TokenDot }
+  ','       { TokenComma }
+  ')'       { TokenRParen }
+  '('       { TokenLParen }
+  ']'       { TokenRBracket }
+  '['       { TokenLBracket }
+  '~'       { TokenTilda }
+  ':'       { TokenColon }
+  ';'       { TokenSemicolon }
+  '|'       { TokenHBar }
+  '='	    { TokenEqual }
+  '_'	    { TokenUnderscore }
+  theorem   { TokenTheorem }
+  axiom     { TokenAxiom }
+  proof     { TokenProof }
+  qed       { TokenQed }
+  import    { TokenImport }
+  predicate { TokenPredicate }
+  apply     { TokenApply }
+  use       { TokenUse }
+  inst	    { TokenInst }
+  I         { TokenI }
+  Cut       { TokenCut }
+  AndL1     { TokenAndL1 }
+  AndL2     { TokenAndL2 }
+  AndR      { TokenAndR }
+  OrL       { TokenOrL }
+  OrR1      { TokenOrR1 }
+  OrR2      { TokenOrR2 }
+  ImpL      { TokenImpL }
+  ImpR      { TokenImpR }
+  BottomL   { TokenBottomL }
+  TopR      { TokenTopR }
+  ForallL   { TokenForallL }
+  ForallR   { TokenForallR }
+  ExistL    { TokenExistL }
+  ExistR    { TokenExistR }
+  WL        { TokenWL }
+  WR        { TokenWR }
+  CL        { TokenCL }
+  CR        { TokenCR }
+  PL        { TokenPL }
+  PR        { TokenPR }
+  newline   { TokenNewline }
+  number    { TokenNumber $$ }
+  strlit    { TokenStrLit $$ }
+  ident     { TokenIdent $$ }
+  haskell   { TokenHaskellCode $$ }
 
-%right '->'
+%right '==>'
 %left and or
 %nonassoc '~'
+
+%right '=>'
 
 %%
 
 Laire
-  : Lstmts  { Laire $1 }
+  : Decls  { Laire $1 }
 
-Lstmts
+Decls
   : {- empty -}  { [] }
-  | Decl Lstmts  { $1 : $2 }
+  | Decl Decls  { $1 : $2 }
 
 Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
+  | import strlit  { ImportD $2 }
+  | predicate Formula  { PredD $2 }
 
 Proof
   : {- empty -}  { Proof [] }
   | proof Commands qed  { Proof $2 }
+
+Constructors
+  : {- empty -}  { [] }
+  | Term  { [$1] }
+  | Term '|' Constructors  { $1 : $3 }
 
 Commands
   : {- empty -}  { [] }
@@ -90,7 +108,27 @@ Commands
 Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
-  | use ident  { Use $2 }
+  | use ident '[' Predicates ']'  { Use $2 $4 }
+  | inst ident '[' Predicate ']'  { Inst $2 $4 }
+
+Predicates
+  : {- empty -}  { [] }
+  | Predicate  { [Just $1] }
+  | '_'  { [Nothing] }
+  | Predicate ',' Predicates  { Just $1 : $3 }
+  | '_' ',' Predicates  { Nothing : $3 }
+
+Predicate
+  : Arguments '=>' Predicate  { PredFun $1 $3 }
+  | Formula  { PredFml $1 }
+
+Arguments
+  : ident  { [$1] }
+  | '(' Idents ')'  { $2 }
+
+Idents
+  : ident  { [$1] }
+  | ident ',' Idents { $1 : $3 }
 
 Rules
   : Rule  { [$1] }
@@ -121,7 +159,7 @@ Rule
   | PR number  { PR $2 }
 
 Formula
-  : Formula '->' Formula      { $1 :->: $3 }
+  : Formula '==>' Formula     { $1 :==>: $3 }
   | forall ident '.' Formula  { Forall $2 $4 }
   | exist ident '.' Formula   { Exist $2 $4 }
   | Formula or Formula        { $1 :\/: $3 }
