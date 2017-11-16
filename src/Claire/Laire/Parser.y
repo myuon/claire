@@ -10,6 +10,7 @@ import Claire.Laire.Lexer
 %name comparser Command
 %name folparser Formula
 %name termparser Term
+%name predparser Predicate
 
 %tokentype { Token }
 
@@ -19,6 +20,7 @@ import Claire.Laire.Lexer
   top      { TokenTop }
   bottom   { TokenBottom }
   '==>'    { TokenArrow }
+  '=>'     { TokenFun }
   and      { TokenAnd }
   or       { TokenOr }
   '.'      { TokenDot }
@@ -40,6 +42,7 @@ import Claire.Laire.Lexer
   import   { TokenImport }
   apply    { TokenApply }
   use      { TokenUse }
+  inst	   { TokenInst }
   I        { TokenI }
   Cut      { TokenCut }
   AndL1    { TokenAndL1 }
@@ -71,6 +74,8 @@ import Claire.Laire.Lexer
 %right '==>'
 %left and or
 %nonassoc '~'
+
+%left '=>'
 
 %%
 
@@ -107,14 +112,15 @@ Commands
 Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
-  | use ident '[' Formulas ']'  { Use $2 $4 }
+  | use ident '[' Predicates ']'  { Use $2 $4 }
+  | inst ident '[' Predicate ']'  { Inst $2 $4 }
 
-Formulas
+Predicates
   : {- empty -}  { [] }
-  | Formula  { [Just $1] }
+  | Predicate  { [Just $1] }
   | '_'  { [Nothing] }
-  | Formula ',' Formulas  { Just $1 : $3 }
-  | '_' ',' Formulas  { Nothing : $3 }
+  | Predicate ',' Predicates  { Just $1 : $3 }
+  | '_' ',' Predicates  { Nothing : $3 }
 
 Rules
   : Rule  { [$1] }
@@ -143,6 +149,10 @@ Rule
   | CR  { CR }
   | PL number  { PL $2 }
   | PR number  { PR $2 }
+
+Predicate
+  : '(' Idents ')' '=>' Predicate  { PredFun $2 $5 }
+  | Formula  { PredFml $1 }
 
 Formula
   : Formula '==>' Formula     { $1 :==>: $3 }

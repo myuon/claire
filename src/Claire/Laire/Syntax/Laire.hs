@@ -10,7 +10,8 @@ data Laire = Laire [Decl]
 
 data Command
   = Apply [Rule]
-  | Use ThmIndex [Maybe Formula]
+  | Use ThmIndex [Maybe Predicate]
+  | Inst Ident Predicate
   deriving (Show)
 
 data Decl
@@ -22,5 +23,4 @@ data Decl
 data Proof
   = Proof [Command]
   deriving Show
-
 

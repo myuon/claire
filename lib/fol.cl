@@ -6,7 +6,14 @@ theorem sym: eq(r,s) ==> eq(s,r)
 proof
   apply ImpR
   use subst []
-  
+  apply (ForallL [r]; ForallL [s])
+  inst P [(x,) => eq(x,r)]
+  inst eq [(x,y) => eq(x,y)]
+  apply (ImpL; PR 1; WR; I; ImpL)
+  use refl []
+  apply (ForallL [r])
+  inst eq [(x,y) => eq(x,y)]
+  apply (PR 1; WR; PL 0; WL; I; PL 0; WL; I)
 qed
 
 #axiom sym: eq(r,s) ==> eq(s,r)

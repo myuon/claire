@@ -3,6 +3,7 @@
 module Claire.Machinery where
 
 import Control.Monad.State.Strict
+import Control.Monad.Catch
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
@@ -15,11 +16,13 @@ import Claire.Checker
 data ComSuspender y
   = ComAwait (Command -> y)
   | CannotApply Rule [Judgement] y
+  | CannotInstantiate SomeException y
   deriving (Functor)
 
 instance Show (ComSuspender y) where
   show (ComAwait _) = "ComAwait"
   show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
+  show (CannotInstantiate err _) = show err
 
 commandM :: (Monad m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
@@ -35,8 +38,16 @@ commandM env = do
     Use idx args -> do
       let rfml = thms env M.! idx
       let fps = fp env rfml
-      let fml = foldl (\fml (i,mf) -> maybe fml (\f -> substPred i f fml) mf) rfml (zip (Set.toList fps) args)
+      let fml = either (error . show) id $ foldl (\fml (i,mf) -> fml >>= \u -> maybe fml (\f -> substPred i f u) mf) (return rfml) (zip (Set.toList fps) args)
       lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
+    Inst idt pred -> do
+      js <- lift get
+      case js of
+        [] -> suspend $ CannotInstantiate (error "empty judgement") (return ())
+        (Judgement (assms S.:|> assm) props : js') -> do
+          case substPred ('?':idt) pred assm of
+            Right r -> lift $ put $ Judgement (assms S.:|> r) props : js'
+            Left err -> suspend $ CannotInstantiate err (return ())
 
   js <- lift get
   unless (null js) $ commandM env
@@ -86,6 +97,9 @@ toplevelM = forever $ do
                 (c:cs) -> do
                   go (cont c) js' cs
             Left (z@(CannotApply _ _ cont)) -> do
+              suspend $ ComError z (return ())
+              go cont js coms
+            Left (z@(CannotInstantiate _ cont)) -> do
               suspend $ ComError z (return ())
               go cont js coms
 

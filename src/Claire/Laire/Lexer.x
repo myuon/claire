@@ -16,6 +16,7 @@ tokens :-
   Top      { \s -> TokenTop }
   Bottom   { \s -> TokenBottom }
   "==>"    { \s -> TokenArrow }
+  "=>"	   { \s -> TokenFun }
   "\/"     { \s -> TokenOr }
   "/\"     { \s -> TokenAnd }
   "."      { \s -> TokenDot }
@@ -38,6 +39,7 @@ tokens :-
   import   { \s -> TokenImport }
   apply    { \s -> TokenApply }
   use      { \s -> TokenUse }
+  inst	   { \s -> TokenInst }
   Cut      { \s -> TokenCut }
   I        { \s -> TokenI }
   Cut      { \s -> TokenCut }
@@ -88,6 +90,7 @@ data Token
   | TokenHBar
   | TokenEqual
   | TokenUnderscore
+  | TokenFun
   | TokenTheorem
   | TokenProof
   | TokenQed
@@ -95,6 +98,7 @@ data Token
   | TokenImport
   | TokenApply
   | TokenUse
+  | TokenInst
   | TokenI
   | TokenCut
   | TokenAndL1
