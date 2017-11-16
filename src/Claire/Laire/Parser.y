@@ -176,7 +176,8 @@ Formula
   | ident                     { Pred $1 [] }
 
 Terms
-  : Term  { [$1] }
+  : {- empty -}  { [] }
+  | Term  { [$1] }
   | Term ',' Terms  { $1 : $3 }
 
 Term

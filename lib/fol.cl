@@ -29,4 +29,36 @@ proof
   apply (PL 0, WL, PL 0, WL, I)
 qed
 
+## forall
+#predicate forall(x,y)
+#
+#axiom forallI: eq(P(x),true) ==> forall(x,P(x))
+#axiom forallE: forall(x,P(x)) ==> eq(P(t),true)
+#
+## true, false
+#axiom true_def: eq(true, forall(x,eq(x,x)))
+#axiom false_def: eq(false, forall(x,x))
+#
+## imp
+#predicate imp(x,y)
+#
+#axiom impI: (eq(P,true) ==> eq(Q,true)) ==> imp(P,Q)
+#axiom impE: imp(P,Q) ==> (eq(P,true) ==> eq(Q,true))
+#
+## not, and, or
+#predicate not(x)
+#predicate and(x,y)
+#predicate or(x,y)
+#
+#axiom not_def: eq(not(P), imp(P,false))
+#
+## p/\q = ~(~p \/ ~q) = ~(p --> ~q)
+#axiom and_def: eq(and(P,Q), not(imp(P,not(Q))))
+#
+#axiom or_def: eq(or(P,Q), not(and(not(P), not(Q))))
+#
+## exist
+#predicate exist(x,y)
+#
+#axiom exist_def: eq(exist(x,P(x)), not(forall(x,P(x))))
 
