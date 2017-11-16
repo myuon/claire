@@ -7,7 +7,7 @@ proof
   apply ImpR
   use subst []
   apply (ForallL [r]; ForallL [s])
-  inst P [(x,) => eq(x,r)]
+  inst P [x => eq(x,r)]
   inst eq [(x,y) => eq(x,y)]
   apply (ImpL; PR 1; WR; I; ImpL)
   use refl []

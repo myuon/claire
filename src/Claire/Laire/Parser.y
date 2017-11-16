@@ -10,7 +10,6 @@ import Claire.Laire.Lexer
 %name comparser Command
 %name folparser Formula
 %name termparser Term
-%name predparser Predicate
 
 %tokentype { Token }
 
@@ -75,7 +74,7 @@ import Claire.Laire.Lexer
 %left and or
 %nonassoc '~'
 
-%left '=>'
+%right '=>'
 
 %%
 
@@ -90,11 +89,6 @@ Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | import strlit  { ImportD $2 }
-
-Idents
-  : {- empty -}  { [] }
-  | ident  { [$1] }
-  | ident ',' Idents { $1 : $3 }
 
 Proof
   : {- empty -}  { Proof [] }
@@ -121,6 +115,18 @@ Predicates
   | '_'  { [Nothing] }
   | Predicate ',' Predicates  { Just $1 : $3 }
   | '_' ',' Predicates  { Nothing : $3 }
+
+Predicate
+  : Arguments '=>' Predicate  { PredFun $1 $3 }
+  | Formula  { PredFml $1 }
+
+Arguments
+  : ident  { [$1] }
+  | '(' Idents ')'  { $2 }
+
+Idents
+  : ident  { [$1] }
+  | ident ',' Idents { $1 : $3 }
 
 Rules
   : Rule  { [$1] }
@@ -149,10 +155,6 @@ Rule
   | CR  { CR }
   | PL number  { PL $2 }
   | PR number  { PR $2 }
-
-Predicate
-  : '(' Idents ')' '=>' Predicate  { PredFun $2 $5 }
-  | Formula  { PredFml $1 }
 
 Formula
   : Formula '==>' Formula     { $1 :==>: $3 }
