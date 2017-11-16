@@ -3,6 +3,9 @@ module Claire.Checker where
 import qualified Data.Sequence as S
 import Claire.Laire
 
+newGoal :: Formula -> [Judgement]
+newGoal fml = [Judgement S.empty (S.singleton fml)]
+
 judge :: Env -> [Rule] -> [Judgement] -> Either (Rule, [Judgement]) [Judgement]
 judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
   go I (Judgement assms props : js) | S.length assms == 1 && assms == props = Right js

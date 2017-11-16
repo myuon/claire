@@ -86,7 +86,7 @@ toplevelM = forever $ do
     runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
     runThmD idx fml coms = do
       env <- lift get
-      go (commandM env) [Judgement S.empty (S.singleton fml)] coms
+      go (commandM env) (newGoal fml) coms
       lift $ modify $ insertThm idx fml
 
       where
