@@ -35,7 +35,7 @@ commandM env = do
     Use idx args -> do
       let rfml = thms env M.! idx
       let fps = fp env rfml
-      let fml = foldl (\fml (i,f) -> substPred i f fml) rfml (zip (Set.toList fps) args)
+      let fml = foldl (\fml (i,mf) -> maybe fml (\f -> substPred i f fml) mf) rfml (zip (Set.toList fps) args)
       lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
 
   js <- lift get
@@ -69,7 +69,7 @@ toplevelM = forever $ do
     runThmD idx fml coms = do
       env <- lift get
       go (commandM env) [Judgement S.empty (S.singleton fml)] coms
-      lift $ modify $ insertThm idx $ metagen env fml
+      lift $ modify $ insertThm idx fml
 
       where
         go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()

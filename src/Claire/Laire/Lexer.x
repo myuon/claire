@@ -30,6 +30,7 @@ tokens :-
   ";"      { \s -> TokenSemicolon }
   "|"	   { \s -> TokenHBar }
   "="	   { \s -> TokenEqual }
+  "_"	   { \s -> TokenUnderscore }
   theorem  { \s -> TokenTheorem }
   proof    { \s -> TokenProof }
   qed      { \s -> TokenQed }
@@ -86,6 +87,7 @@ data Token
   | TokenSemicolon
   | TokenHBar
   | TokenEqual
+  | TokenUnderscore
   | TokenTheorem
   | TokenProof
   | TokenQed

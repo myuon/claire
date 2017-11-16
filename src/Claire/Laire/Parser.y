@@ -32,6 +32,7 @@ import Claire.Laire.Lexer
   ';'      { TokenSemicolon }
   '|'      { TokenHBar }
   '='	   { TokenEqual }
+  '_'	   { TokenUnderscore }
   theorem  { TokenTheorem }
   axiom    { TokenAxiom }
   proof    { TokenProof }
@@ -110,8 +111,10 @@ Command
 
 Formulas
   : {- empty -}  { [] }
-  | Formula  { [$1] }
-  | Formula ',' Formulas  { $1 : $3 }
+  | Formula  { [Just $1] }
+  | '_'  { [Nothing] }
+  | Formula ',' Formulas  { Just $1 : $3 }
+  | '_' ',' Formulas  { Nothing : $3 }
 
 Rules
   : Rule  { [$1] }

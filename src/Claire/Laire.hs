@@ -47,7 +47,7 @@ data Env
   deriving Show
 
 insertThm :: ThmIndex -> Formula -> Env -> Env
-insertThm idx fml env = env { thms = M.insert idx fml (thms env) }
+insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
 
 insertDef :: Ident -> Formula -> Env -> Env
 insertDef idx fml env = env { defs = M.insert idx fml (defs env) }

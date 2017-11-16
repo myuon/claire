@@ -24,4 +24,6 @@ data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
 instance Show Judgement where
   show (Judgement assms prop) = show (toList assms) ++ " |- " ++ show prop
 
+formulize :: Judgement -> Formula
+formulize (Judgement assms props) = foldl (:/\:) Top assms :==>: foldl (:\/:) Bottom props
 

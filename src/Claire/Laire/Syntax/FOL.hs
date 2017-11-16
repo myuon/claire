@@ -52,8 +52,8 @@ substTerm idt t' = go where
 
 substPred :: Ident -> Formula -> Formula -> Formula
 substPred idt pred = go where
-  go (z@(Pred _ _))
-    | z == Pred idt [] = pred
+  go (z@(Pred idt' _))
+    | idt == idt' = pred
     | otherwise = z
   go Top = Top
   go Bottom = Bottom
