@@ -14,8 +14,8 @@ main = do
     True -> do
       p <- readFile (head xs)
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
-      putStrLn "= Definitions ="
-      mapM_ print $ M.assocs $ defs env
+      putStrLn "= Predicates ="
+      mapM_ print $ M.assocs $ preds env
       putStrLn "= Proved Theorems ="
       mapM_ print $ M.assocs $ thms env
     False -> do

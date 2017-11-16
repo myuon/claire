@@ -18,6 +18,7 @@ data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
   | ImportD String
+  | PredD Formula
   deriving Show
 
 data Proof

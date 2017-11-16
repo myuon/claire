@@ -55,6 +55,7 @@ commandM env = do
 data DeclSuspender m y
   = DeclAwait (Decl -> y)
   | ProofNotFinished [Judgement] (Command -> y)
+  | IllegalPredicateDeclaration Formula y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -74,7 +75,13 @@ toplevelM = forever $ do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
-      
+    PredD fml -> do
+      let isVar (Var _) = True
+          isVar _ = False
+      case fml of
+        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p (length ts) (preds env) }
+        z -> suspend $ IllegalPredicateDeclaration z (return ())
+        
   where
     runThmD :: Monad m => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
     runThmD idx fml coms = do

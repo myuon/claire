@@ -1,4 +1,6 @@
 # equivalence relation
+predicate eq(x,y)
+
 axiom refl: Forall r. eq(r,r)
 axiom subst: Forall a. Forall b. eq(a,b) ==> P(a) ==> P(b)
 
@@ -16,9 +18,7 @@ proof
   apply (PR 1; WR; PL 0; WL; I; PL 0; WL; I)
 qed
 
-#axiom sym: eq(r,s) ==> eq(s,r)
 axiom trans: eq(r,s) ==> eq(s,t) ==> eq(r,t)
-axiom congr: eq(a,b) ==> eq(p(a),p(b))
 
 # FORALL
 axiom forallI: A(x) ==> FORALL(y,A(y))

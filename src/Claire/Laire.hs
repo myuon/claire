@@ -11,7 +11,6 @@ module Claire.Laire
 
   , Env(..)
   , insertThm
-  , insertDef
   , defEnv
   , fp
   , metagen
@@ -42,15 +41,12 @@ pTerm = termparser . alexScanTokens
 data Env
   = Env
   { thms :: M.Map ThmIndex Formula
-  , defs :: M.Map Ident Formula
+  , preds :: M.Map Ident Int
   }
   deriving Show
 
 insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
-
-insertDef :: Ident -> Formula -> Env -> Env
-insertDef idx fml env = env { defs = M.insert idx fml (defs env) }
 
 defEnv :: Env
 defEnv = Env M.empty M.empty
@@ -58,7 +54,7 @@ defEnv = Env M.empty M.empty
 fp :: Env -> Formula -> S.Set Ident
 fp env = go where
   go (Pred p ts)
-    | p `elem` M.keys (defs env) = S.empty
+    | p `elem` M.keys (preds env) = S.empty
     | otherwise = S.singleton p
   go Top = S.empty
   go Bottom = S.empty
@@ -71,7 +67,7 @@ fp env = go where
 metagen :: Env -> Formula -> Formula
 metagen env = go where
   go (Pred p ts)
-    | p `elem` M.keys (defs env) = Pred p ts
+    | p `elem` M.keys (preds env) = Pred p ts
     | otherwise = Pred ('?' : p) ts
   go Top = Top
   go Bottom = Bottom

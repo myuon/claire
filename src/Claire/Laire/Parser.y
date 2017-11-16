@@ -14,61 +14,62 @@ import Claire.Laire.Lexer
 %tokentype { Token }
 
 %token
-  forall   { TokenForall }
-  exist    { TokenExist }
-  top      { TokenTop }
-  bottom   { TokenBottom }
-  '==>'    { TokenArrow }
-  '=>'     { TokenFun }
-  and      { TokenAnd }
-  or       { TokenOr }
-  '.'      { TokenDot }
-  ','      { TokenComma }
-  ')'      { TokenRParen }
-  '('      { TokenLParen }
-  ']'      { TokenRBracket }
-  '['      { TokenLBracket }
-  '~'      { TokenTilda }
-  ':'      { TokenColon }
-  ';'      { TokenSemicolon }
-  '|'      { TokenHBar }
-  '='	   { TokenEqual }
-  '_'	   { TokenUnderscore }
-  theorem  { TokenTheorem }
-  axiom    { TokenAxiom }
-  proof    { TokenProof }
-  qed      { TokenQed }
-  import   { TokenImport }
-  apply    { TokenApply }
-  use      { TokenUse }
-  inst	   { TokenInst }
-  I        { TokenI }
-  Cut      { TokenCut }
-  AndL1    { TokenAndL1 }
-  AndL2    { TokenAndL2 }
-  AndR     { TokenAndR }
-  OrL      { TokenOrL }
-  OrR1     { TokenOrR1 }
-  OrR2     { TokenOrR2 }
-  ImpL     { TokenImpL }
-  ImpR     { TokenImpR }
-  BottomL  { TokenBottomL }
-  TopR     { TokenTopR }
-  ForallL  { TokenForallL }
-  ForallR  { TokenForallR }
-  ExistL   { TokenExistL }
-  ExistR   { TokenExistR }
-  WL       { TokenWL }
-  WR       { TokenWR }
-  CL       { TokenCL }
-  CR       { TokenCR }
-  PL       { TokenPL }
-  PR       { TokenPR }
-  newline  { TokenNewline }
-  number   { TokenNumber $$ }
-  strlit   { TokenStrLit $$ }
-  ident    { TokenIdent $$ }
-  haskell  { TokenHaskellCode $$ }
+  forall    { TokenForall }
+  exist     { TokenExist }
+  top       { TokenTop }
+  bottom    { TokenBottom }
+  '==>'     { TokenArrow }
+  '=>'      { TokenFun }
+  and       { TokenAnd }
+  or        { TokenOr }
+  '.'       { TokenDot }
+  ','       { TokenComma }
+  ')'       { TokenRParen }
+  '('       { TokenLParen }
+  ']'       { TokenRBracket }
+  '['       { TokenLBracket }
+  '~'       { TokenTilda }
+  ':'       { TokenColon }
+  ';'       { TokenSemicolon }
+  '|'       { TokenHBar }
+  '='	    { TokenEqual }
+  '_'	    { TokenUnderscore }
+  theorem   { TokenTheorem }
+  axiom     { TokenAxiom }
+  proof     { TokenProof }
+  qed       { TokenQed }
+  import    { TokenImport }
+  predicate { TokenPredicate }
+  apply     { TokenApply }
+  use       { TokenUse }
+  inst	    { TokenInst }
+  I         { TokenI }
+  Cut       { TokenCut }
+  AndL1     { TokenAndL1 }
+  AndL2     { TokenAndL2 }
+  AndR      { TokenAndR }
+  OrL       { TokenOrL }
+  OrR1      { TokenOrR1 }
+  OrR2      { TokenOrR2 }
+  ImpL      { TokenImpL }
+  ImpR      { TokenImpR }
+  BottomL   { TokenBottomL }
+  TopR      { TokenTopR }
+  ForallL   { TokenForallL }
+  ForallR   { TokenForallR }
+  ExistL    { TokenExistL }
+  ExistR    { TokenExistR }
+  WL        { TokenWL }
+  WR        { TokenWR }
+  CL        { TokenCL }
+  CR        { TokenCR }
+  PL        { TokenPL }
+  PR        { TokenPR }
+  newline   { TokenNewline }
+  number    { TokenNumber $$ }
+  strlit    { TokenStrLit $$ }
+  ident     { TokenIdent $$ }
+  haskell   { TokenHaskellCode $$ }
 
 %right '==>'
 %left and or
@@ -89,6 +90,7 @@ Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | import strlit  { ImportD $2 }
+  | predicate Formula  { PredD $2 }
 
 Proof
   : {- empty -}  { Proof [] }
