@@ -17,9 +17,11 @@ main = do
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
       putStrLn "= Predicates ="
       mapM_ print $ M.assocs $ preds env
+      putStrLn "= Terms ="
+      mapM_ print $ M.assocs $ terms env
       putStrLn "= Proved Theorems ="
       mapM_ print $ M.assocs $ thms env
-      clairepl env
+--      clairepl env
     False -> do
       mapM_ putStrLn $
         [ "========================="
@@ -27,8 +29,8 @@ main = do
         , "========================="
         , ""
         ]
-      env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile "lib/preliminaries.cl"
-      clairepl env
+--      env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile "lib/preliminaries.cl"
+      clairepl defEnv
 
 clairepl :: Env -> IO ()
 clairepl env = go env toplevelM where
@@ -49,7 +51,7 @@ clairepl env = go env toplevelM where
         go (addProof env' (t,raw)) (cont t)
       Left (ComError z cont) -> do
         print z
-        let unaddProof env | length (proof env) >= 1 = env { proof = tail (proof env) }
+        let unaddProof env | length (proof env) >= 1 = env { proof = init (proof env) }
             unaddProof env = env
         go (unaddProof env') cont
 
