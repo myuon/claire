@@ -10,8 +10,9 @@ data Laire = Laire [Decl]
 
 data Command
   = Apply [Rule]
-  | Use ThmIndex [Maybe Predicate]
+  | Use ThmIndex
   | Inst Ident Predicate
+  | NoApply Rule
   deriving (Show)
 
 data Decl
@@ -19,6 +20,8 @@ data Decl
   | AxiomD ThmIndex Formula
   | ImportD String
   | PredD Formula
+  | PrintProof
+  | TermD Term
   deriving Show
 
 data Proof

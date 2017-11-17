@@ -1,5 +1,5 @@
 name:                claire
-version:             0.4.1.0
+version:             0.4.2.0
 #synopsis:
 #description:
 homepage:            https://github.com/myuon/claire#readme
@@ -23,6 +23,7 @@ dependencies:
 default-extensions:
 - PatternSynonyms
 - Rank2Types
+- TypeApplications
 
 ghc-options:
 - -Wunused-imports

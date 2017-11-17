@@ -40,7 +40,10 @@ import Claire.Laire.Lexer
   qed       { TokenQed }
   import    { TokenImport }
   predicate { TokenPredicate }
+  print_proof  { TokenPrintProof }
+  term	    { TokenTerm }
   apply     { TokenApply }
+  noapply   { TokenNoApply }
   use       { TokenUse }
   inst	    { TokenInst }
   I         { TokenI }
@@ -91,15 +94,12 @@ Decl
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | import strlit  { ImportD $2 }
   | predicate Formula  { PredD $2 }
+  | print_proof  { PrintProof }
+  | term Term  { TermD $2 }
 
 Proof
   : {- empty -}  { Proof [] }
   | proof Commands qed  { Proof $2 }
-
-Constructors
-  : {- empty -}  { [] }
-  | Term  { [$1] }
-  | Term '|' Constructors  { $1 : $3 }
 
 Commands
   : {- empty -}  { [] }
@@ -108,7 +108,8 @@ Commands
 Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
-  | use ident '[' Predicates ']'  { Use $2 $4 }
+  | noapply Rule  { NoApply $2 }
+  | use ident  { Use $2 }
   | inst ident '[' Predicate ']'  { Inst $2 $4 }
 
 Predicates
@@ -132,11 +133,11 @@ Idents
 
 Rules
   : Rule  { [$1] }
-  | Rule ';' Rules  { $1 : $3 }
+  | Rule ',' Rules  { $1 : $3 }
 
 Rule
   : I  { I }
-  | Cut Formula  { Cut $2 }
+  | Cut '[' Formula ']'  { Cut $3 }
   | AndL1  { AndL1 }
   | AndL2  { AndL2 }
   | AndR  { AndR }
@@ -172,7 +173,8 @@ Formula
   | ident                     { Pred $1 [] }
 
 Terms
-  : Term  { [$1] }
+  : {- empty -}  { [] }
+  | Term  { [$1] }
   | Term ',' Terms  { $1 : $3 }
 
 Term
