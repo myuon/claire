@@ -7,7 +7,6 @@ import Control.Monad.Catch
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
-import qualified Data.Set as Set
 import qualified Data.Map as M
 import Claire.Laire
 import Claire.Checker
@@ -45,10 +44,8 @@ commandM env = do
           liftIO $ putStrLn $ "= NoApply " ++ show r ++ " result"
           liftIO $ mapM_ print js'
           liftIO $ putStrLn $ "=\n"
-    Use idx args -> do
-      let rfml = thms env M.! idx
-      let fps = fp env rfml
-      let fml = either (error . show) id $ foldl (\fml (i,mf) -> fml >>= \u -> maybe fml (\f -> substPred i f u) mf) (return rfml) (zip (Set.toList fps) args)
+    Use idx -> do
+      let fml = thms env M.! idx
       lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
     Inst idt pred -> do
       js <- lift get
@@ -66,6 +63,7 @@ data DeclSuspender m y
   = DeclAwait (Decl -> y)
   | ProofNotFinished [Judgement] (Command -> y)
   | IllegalPredicateDeclaration Formula y
+  | IllegalTermDeclaration Term y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -76,6 +74,8 @@ instance Show (DeclSuspender m y) where
 
 toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
+  let isVar (Var _) = True
+      isVar _ = False
   decl <- suspend (DeclAwait return)
   case decl of
     AxiomD idx fml -> do
@@ -88,14 +88,16 @@ toplevelM = forever $ do
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
     PredD fml -> do
-      let isVar (Var _) = True
-          isVar _ = False
       case fml of
         Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p (length ts) (preds env) }
         z -> suspend $ IllegalPredicateDeclaration z (return ())
     PrintProof -> do
       env <- lift get
       liftIO $ putStrLn $ print_proof env
+    TermD trm -> case trm of
+      Var v -> lift $ modify $ \env -> env { terms = M.insert v 0 (terms env) }
+      Func f ts | all isVar ts -> lift $ modify $ \env -> env { terms = M.insert f (length ts) (terms env) }
+      z -> suspend $ IllegalTermDeclaration z (return ())
 
   where
     runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()

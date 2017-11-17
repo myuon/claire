@@ -41,6 +41,7 @@ import Claire.Laire.Lexer
   import    { TokenImport }
   predicate { TokenPredicate }
   print_proof  { TokenPrintProof }
+  term	    { TokenTerm }
   apply     { TokenApply }
   noapply   { TokenNoApply }
   use       { TokenUse }
@@ -94,15 +95,11 @@ Decl
   | import strlit  { ImportD $2 }
   | predicate Formula  { PredD $2 }
   | print_proof  { PrintProof }
+  | term Term  { TermD $2 }
 
 Proof
   : {- empty -}  { Proof [] }
   | proof Commands qed  { Proof $2 }
-
-Constructors
-  : {- empty -}  { [] }
-  | Term  { [$1] }
-  | Term '|' Constructors  { $1 : $3 }
 
 Commands
   : {- empty -}  { [] }
@@ -112,7 +109,7 @@ Command
   : apply Rule  { Apply [$2] }
   | apply '(' Rules ')'  { Apply $3 }
   | noapply Rule  { NoApply $2 }
-  | use ident '[' Predicates ']'  { Use $2 $4 }
+  | use ident  { Use $2 }
   | inst ident '[' Predicate ']'  { Inst $2 $4 }
 
 Predicates
@@ -140,7 +137,7 @@ Rules
 
 Rule
   : I  { I }
-  | Cut Formula  { Cut $2 }
+  | Cut '[' Formula ']'  { Cut $3 }
   | AndL1  { AndL1 }
   | AndL2  { AndL2 }
   | AndR  { AndR }

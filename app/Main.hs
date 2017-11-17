@@ -47,8 +47,8 @@ clairepl env = go env toplevelM where
         (t,raw) <- safep (putStr "command>" >> hFlush stdout) (\s -> let s' = pCommand s in s' `seq` (s',s))
         let addProof env k = env { proof = proof env ++ [k] }
         go (addProof env' (t,raw)) (cont t)
-      Left (ComError (CannotApply r js _) cont) -> do
-        putStrLn $ "Cannot apply " ++ show r ++ " to " ++ show js
+      Left (ComError z cont) -> do
+        print z
         let unaddProof env | length (proof env) >= 1 = env { proof = tail (proof env) }
             unaddProof env = env
         go (unaddProof env') cont

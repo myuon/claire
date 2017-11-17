@@ -43,6 +43,7 @@ data Env
   = Env
   { thms :: M.Map ThmIndex Formula
   , preds :: M.Map Ident Int
+  , terms :: M.Map Ident Int
   , proof :: [(Command, String)]
   }
   deriving Show
@@ -51,7 +52,7 @@ insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
 
 defEnv :: Env
-defEnv = Env M.empty M.empty []
+defEnv = Env M.empty M.empty M.empty []
 
 print_proof :: Env -> String
 print_proof env = unlines $
