@@ -1,3 +1,5 @@
+Hs_file "lib/Commands.hs"
+
 # equivalence relation
 predicate eq(x,y)
 
@@ -9,13 +11,16 @@ proof
   apply ImpR
   apply Cut [Forall a. Forall b. eq(a,b) ==> eq(a,a) ==> eq(b,a)]
   use subst
+  apply (ForallR a, ForallR b)
   inst P [x => eq(x,a)]
-  apply (ForallR a, ForallR b, PL 0, WL, PR 1, WR, I)
-  apply (ForallL [r], ForallL [s], ImpL, PR 0, PR 1, WR, I)
-  apply (ImpL, PR 1, WR)
+  assumption
+  apply (ForallL [r], ForallL [s])
+  apply ImpL
+  assumption
+  apply ImpL
   use refl
-  apply (PL 0, WL, I)
-  apply (PL 0, WL, I)
+  assumption
+  assumption
 qed
 
 theorem trans: eq(r,s) ==> eq(s,t) ==> eq(r,t)
@@ -25,10 +30,13 @@ proof
   use subst
   inst P [x => eq(r,x)]
   apply (ForallR a, ForallR b)
-  apply (PR 1, WR, PL 0, WL, PL 0, WL, I)
-  apply (ForallL [s], ForallL [t], ImpL, PR 1, WR, PL 0, WL, I)
-  apply (ImpL, PR 1, WR, WL, I)
-  apply (PL 0, WL, PL 0, WL, I)
+  assumption
+  apply (ForallL [s], ForallL [t])
+  apply ImpL
+  assumption
+  apply ImpL
+  assumption
+  assumption
 qed
 
 # trueprop

@@ -13,6 +13,7 @@ data Command
   | Use ThmIndex
   | Inst Ident Predicate
   | NoApply Rule
+  | NewCommand Ident
   deriving (Show)
 
 data Decl
@@ -22,6 +23,7 @@ data Decl
   | PredD Formula
   | PrintProof
   | TermD Term
+  | HsFile String
   deriving Show
 
 data Proof

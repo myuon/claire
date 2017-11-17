@@ -40,6 +40,7 @@ tokens :-
   predicate { \s -> TokenPredicate }
   term	    { \s -> TokenTerm }
   "print_proof"  { \s -> TokenPrintProof }
+  "Hs_file" { \s -> TokenHsFile }
   apply     { \s -> TokenApply }
   noapply   { \s -> TokenNoApply }
   use       { \s -> TokenUse }
@@ -101,6 +102,7 @@ data Token
   | TokenAxiom
   | TokenPredicate
   | TokenPrintProof
+  | TokenHsFile
   | TokenTerm
   | TokenImport
   | TokenApply

@@ -41,6 +41,7 @@ import Claire.Laire.Lexer
   import    { TokenImport }
   predicate { TokenPredicate }
   print_proof  { TokenPrintProof }
+  Hs_file   { TokenHsFile }
   term	    { TokenTerm }
   apply     { TokenApply }
   noapply   { TokenNoApply }
@@ -96,6 +97,7 @@ Decl
   | predicate Formula  { PredD $2 }
   | print_proof  { PrintProof }
   | term Term  { TermD $2 }
+  | Hs_file strlit  { HsFile $2 }
 
 Proof
   : {- empty -}  { Proof [] }
@@ -111,6 +113,7 @@ Command
   | noapply Rule  { NoApply $2 }
   | use ident  { Use $2 }
   | inst ident '[' Predicate ']'  { Inst $2 $4 }
+  | ident  { NewCommand $1 }
 
 Predicates
   : {- empty -}  { [] }
