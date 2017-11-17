@@ -49,7 +49,7 @@ clairepl env = go env toplevelM where
         go (addProof env' (t,raw)) (cont t)
       Left (ComError z cont) -> do
         print z
-        let unaddProof env | length (proof env) >= 1 = env { proof = tail (proof env) }
+        let unaddProof env | length (proof env) >= 1 = env { proof = init (proof env) }
             unaddProof env = env
         go (unaddProof env') cont
 
