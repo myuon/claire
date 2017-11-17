@@ -40,37 +40,48 @@ proof
 qed
 
 # trueprop
-term T(x)
+predicate T(x) # :: bool => prop
 
-# forall, true, false
-term forall(x,y)
+# true, false
 term true
 term false
+term not(x)
 
-axiom T_def: eq(T(p),eq(p,true))
+axiom topI: T(true)
+axiom bottomE: T(false) ==> T(P)
 
-axiom forallI: T(P(x)) ==> T(forall(x,P(x)))
-axiom forallE: T(forall(x,P(x))) ==> T(P(t))
-axiom true_def: eq(true, forall(x,eq(x,x)))
-axiom false_def: eq(false, forall(x,x))
+# and, or
+term and(x,y)
+term or(x,y)
+
+axiom andI: T(P) ==> T(Q) ==> T(and(P,Q))
+axiom andE1: T(and(P,Q)) ==> T(P)
+axiom andE2: T(and(P,Q)) ==> T(Q)
+
+axiom orI1: T(P) ==> T(or(P,Q))
+axiom orI2: T(Q) ==> T(or(P,Q))
+axiom orE: T(or(P,Q)) ==> (T(P) ==> T(R)) ==> (T(Q) ==> T(R)) ==> T(R)
 
 # imp
 term imp(x,y)
 
 axiom impI: (T(P) ==> T(Q)) ==> T(imp(P,Q))
-axiom impE: T(imp(P,Q)) ==> (T(P) ==> T(Q))
+axiom impE: T(imp(P,Q)) ==> T(P) ==> T(Q)
 
-# not, and, or
-term not(x)
-term and(x,y)
-term or(x,y)
-
-axiom not_def: eq(not(P), imp(P,false))
-axiom and_def: eq(and(P,Q), not(imp(P,not(Q))))
-axiom or_def: eq(or(P,Q), not(and(not(P), not(Q))))
-
-# exist
+# forall, exist
+term forall(x,y)
 term exist(x,y)
 
-axiom exist_def: eq(exist(x,P(x)), not(forall(x,P(x))))
+axiom forallI: T(P(x)) ==> T(forall(x,P(x)))
+axiom forallE: T(forall(x,P(x))) ==> T(P(t))
+
+axiom existI: T(P(t)) ==> T(exist(x,P(x)))
+axiom existE: T(exist(x,P(x))) ==> (T(P(x)) ==> T(Q)) ==> T(Q)
+
+# not
+term not(x)
+
+axiom not_def: eq(not(P),imp(P,false))
+
+axiom abs: (T(not(P)) ==> T(false)) ==> T(P)
 
