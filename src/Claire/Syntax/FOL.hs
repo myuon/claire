@@ -1,4 +1,4 @@
-module Claire.Laire.Syntax.FOL where
+module Claire.Syntax.FOL where
 
 import Control.Monad
 import Control.Monad.Catch

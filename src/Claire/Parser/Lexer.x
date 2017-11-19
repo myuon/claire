@@ -1,5 +1,5 @@
 {
-module Claire.Laire.Lexer where
+module Claire.Parser.Lexer where
 
 }
 

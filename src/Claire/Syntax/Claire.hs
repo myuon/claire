@@ -1,7 +1,7 @@
-module Claire.Laire.Syntax.Laire where
+module Claire.Syntax.Claire where
 
-import Claire.Laire.Syntax.FOL
-import Claire.Laire.Syntax.LK
+import Claire.Syntax.FOL
+import Claire.Syntax.LK
 
 type ThmIndex = String
 

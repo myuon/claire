@@ -1,7 +1,7 @@
-module Claire.Laire.Syntax.LK where
+module Claire.Syntax.LK where
 
 import Data.Sequence as S
-import Claire.Laire.Syntax.FOL
+import Claire.Syntax.FOL
 import GHC.Exts (toList)
 
 type AssmIndex = String

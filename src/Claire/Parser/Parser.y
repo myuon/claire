@@ -1,8 +1,8 @@
 {
-module Claire.Laire.Parser where
+module Claire.Parser.Parser where
 
-import Claire.Laire.Syntax
-import Claire.Laire.Lexer
+import Claire.Syntax
+import Claire.Parser.Lexer
 }
 
 %name laireparser

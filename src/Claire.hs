@@ -1,10 +1,12 @@
 module Claire
-  ( module Claire.Laire
+  ( module Claire.Syntax
+  , module Claire.Parser
+  , module Claire.Env
   , module Claire.Checker
-  , module Claire.Machinery
   ) where
 
-import Claire.Laire
+import Claire.Syntax
+import Claire.Parser
+import Claire.Env
 import Claire.Checker
-import Claire.Machinery
 

@@ -31,8 +31,8 @@ ghc-options:
 - -Wunused-local-binds
 
 extra-source-files:
-- src/Claire/Laire/Lexer.x
-- src/Claire/Laire/Parser.y
+- src/Claire/Parser/Lexer.x
+- src/Claire/Parser/Parser.y
 
 library:
   source-dirs: src
@@ -45,8 +45,8 @@ library:
   - array
 
   other-modules:
-  - Claire.Laire.Lexer
-  - Claire.Laire.Parser
+  - Claire.Parser.Lexer
+  - Claire.Parser.Parser
 
 executables:
   claire:
