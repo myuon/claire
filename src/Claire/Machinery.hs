@@ -102,9 +102,9 @@ toplevelM = forever $ do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
-    PredD fml -> do
+    PredD fml typ -> do
       case fml of
-        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p (length ts) (preds env) }
+        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p typ (preds env) }
         z -> suspend $ IllegalPredicateDeclaration z (return ())
     PrintProof -> do
       env <- lift get

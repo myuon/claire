@@ -94,7 +94,7 @@ Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula  { AxiomD $2 $4 }
   | import strlit  { ImportD $2 }
-  | predicate Formula  { PredD $2 }
+  | predicate Formula ':' Type { PredD $2 $4 }
   | print_proof  { PrintProof }
   | term Term  { TermD $2 }
   | Hs_file strlit  { HsFile $2 }
@@ -183,6 +183,16 @@ Terms
 Term
   : ident  { Var $1 }
   | ident '(' Terms ')'  { Func $1 $3 }
+
+Type
+  : ident  { VarT $1 }
+  | ident '(' Types ')'  { FuncT $1 $3 }
+  | Type '=>' Type  { ArrT $1 $3 }
+  | '(' Type ')'  { $2 }
+
+Types
+  : Type  { [$1] }
+  | Type ',' Types { $1 : $3 }
 
 {
 happyError s = error $ show s

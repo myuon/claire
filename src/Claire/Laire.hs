@@ -42,7 +42,7 @@ pTerm = termparser . alexScanTokens
 data Env
   = Env
   { thms :: M.Map ThmIndex Formula
-  , preds :: M.Map Ident Int
+  , preds :: M.Map Ident Type
   , terms :: M.Map Ident Int
   , proof :: [(Command, String)]
   , newcommands :: M.Map Ident (Env -> [Judgement] -> Either String [Judgement])

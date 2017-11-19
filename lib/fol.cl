@@ -1,7 +1,9 @@
 Hs_file "lib/Commands.hs"
 
+predicate isnil: list(a) => bool
+
 # equivalence relation
-predicate eq(x,y)
+predicate eq: a => a => prop
 
 axiom refl: eq(r,r)
 axiom subst: eq(a,b) ==> P(a) ==> P(b)
@@ -40,7 +42,7 @@ proof
 qed
 
 # trueprop
-predicate T(x) # :: bool => prop
+predicate T : bool => prop
 
 # true, false
 term true

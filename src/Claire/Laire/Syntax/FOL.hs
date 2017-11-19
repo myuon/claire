@@ -8,6 +8,8 @@ type Ident = String
 
 data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
+data Type = VarT Ident | ArrT Type Type | FuncT Ident [Type] deriving (Eq, Show)
+
 data Formula
   = Pred Ident [Term]
   | Top

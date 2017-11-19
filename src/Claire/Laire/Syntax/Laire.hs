@@ -20,7 +20,7 @@ data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
   | ImportD String
-  | PredD Formula
+  | PredD Formula Type
   | PrintProof
   | TermD Term
   | HsFile String
