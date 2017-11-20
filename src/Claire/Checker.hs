@@ -112,7 +112,7 @@ data DeclSuspender m y
   | IllegalPredicateDeclaration Formula y
   | IllegalTermDeclaration Term y
   | HsFileLoadError InterpreterError y
-  | TypeError TypeInferenceError y
+  | TypeError SomeException y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -134,7 +134,7 @@ toplevelM = forever $ do
     case infer env fml of
       Left err -> suspend $ TypeError err (return ())
       Right typ | u == typ -> k
-      Right typ -> suspend $ TypeError (FormulaTypeMismatch fml u typ) (return ())
+      Right typ -> suspend $ TypeError (toException $ FormulaTypeMismatch fml u typ) (return ())
   }
  
   decl <- suspend (DeclAwait return)

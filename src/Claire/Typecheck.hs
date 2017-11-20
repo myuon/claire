@@ -14,31 +14,31 @@ data TypeInferenceError
 
 instance Exception TypeInferenceError
 
-inferT :: Env -> Term -> Either TypeInferenceError Type
+inferT :: MonadThrow m => Env -> Term -> m Type
 inferT env = go where
   go (Var v) | v `M.member` terms env = do
     return $ terms env M.! v
-  go (Var v) = Left $ NotFound v
+  go (Var v) = throwM $ NotFound v
   go (Func v ts) | v `M.member` terms env = do
     let vty = terms env M.! v
     funtype env vty ts
-  go (Func v ts) = Left $ NotFound v
+  go (Func v ts) = throwM $ NotFound v
 
 expect k t1 t2
   | t1 == t2 = return t1
-  | otherwise = Left $ k t1 t2
+  | otherwise = throwM $ k t1 t2
 
 funtype env ty [] = return ty
 funtype env (ArrT ty1 ty2) (t:ts) = do
   expect (TermTypeMismatch t) ty1 =<< inferT env t
   funtype env ty2 ts
 
-infer :: Env -> Formula -> Either TypeInferenceError Type
+infer :: MonadThrow m => Env -> Formula -> m Type
 infer env = go where
   go (Pred p ts) | p `M.member` preds env = do
     typ <- funtype env (preds env M.! p) ts
     expect (FormulaTypeMismatch (Pred p ts)) Prop typ
-  go (Pred p ts) = Left $ NotFound p
+  go (Pred p ts) = throwM $ NotFound p
   go Top = return Prop
   go Bottom = return Prop
   go (fml1 :/\: fml2) = do
