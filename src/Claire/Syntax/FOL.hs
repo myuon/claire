@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 module Claire.Syntax.FOL where
 
 import Control.Monad
@@ -8,12 +9,14 @@ type Ident = String
 
 data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
-data Type
-  = VarT Ident
-  | ConT Ident [Type]
-  | ArrT Type Type
+data TypeForm a
+  = VarT a
+  | ConT a [Type]
+  | ArrT (TypeForm a) (TypeForm a)
   | Prop
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
+
+type Type = TypeForm Ident
 
 data Formula
   = Pred Ident [Term]

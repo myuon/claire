@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Claire.Typecheck where
 
 import Control.Monad.Catch
@@ -14,6 +15,15 @@ data TypeInferenceError
 
 instance Exception TypeInferenceError
 
+expect k t1 t2
+  | t1 == t2 = return t1
+  | otherwise = throwM $ k t1 t2
+
+funtype env ty [] = return ty
+funtype env (ArrT ty1 ty2) (t:ts) = do
+  expect (TermTypeMismatch t) ty1 =<< inferT env t
+  funtype env ty2 ts
+
 inferT :: MonadThrow m => Env -> Term -> m Type
 inferT env = go where
   go (Var v) | v `M.member` terms env = do
@@ -23,15 +33,6 @@ inferT env = go where
     let vty = terms env M.! v
     funtype env vty ts
   go (Func v ts) = throwM $ NotFound v
-
-expect k t1 t2
-  | t1 == t2 = return t1
-  | otherwise = throwM $ k t1 t2
-
-funtype env ty [] = return ty
-funtype env (ArrT ty1 ty2) (t:ts) = do
-  expect (TermTypeMismatch t) ty1 =<< inferT env t
-  funtype env ty2 ts
 
 infer :: MonadThrow m => Env -> Formula -> m Type
 infer env = go where
