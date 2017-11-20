@@ -8,7 +8,7 @@ import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
 import qualified Data.Map as M
-import Language.Haskell.Interpreter hiding (get)
+import Language.Haskell.Interpreter hiding (get, infer)
 import System.FilePath
 
 import Claire.Syntax
@@ -46,6 +46,64 @@ judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
   go (PR k) (Judgement assms props : js) | k < S.length props = Right $ Judgement assms (S.index props k S.:<| S.deleteAt k props) : js
 
   go r js = Left (r,js)
+
+
+data TypeInferenceError
+  = FormulaTypeMismatch Formula Type Type
+  | TermTypeMismatch Term Type Type
+  | NotFound Ident
+  deriving (Show)
+
+instance Exception TypeInferenceError
+
+inferT :: Env -> Term -> Either TypeInferenceError Type
+inferT env = go where
+  go (Var v) | v `M.member` terms env = do
+    return $ terms env M.! v
+  go (Var v) = Left $ NotFound v
+  go (Func v ts) | v `M.member` terms env = do
+    let vty = terms env M.! v
+    funtype env vty ts
+  go (Func v ts) = Left $ NotFound v
+
+expect k t1 t2
+  | t1 == t2 = return t1
+  | otherwise = Left $ k t1 t2
+
+funtype env ty [] = return ty
+funtype env (ArrT ty1 ty2) (t:ts) = do
+  expect (TermTypeMismatch t) ty1 =<< inferT env t
+  funtype env ty2 ts
+
+infer :: Env -> Formula -> Either TypeInferenceError Type
+infer env = go where
+  go (Pred p ts) | p `M.member` preds env = do
+    typ <- funtype env (preds env M.! p) ts
+    expect (FormulaTypeMismatch (Pred p ts)) Prop typ
+  go (Pred p ts) = Left $ NotFound p
+  go Top = return Prop
+  go Bottom = return Prop
+  go (fml1 :/\: fml2) = do
+    t1 <- go fml1
+    expect (FormulaTypeMismatch fml1) Prop t1
+    t2 <- go fml2
+    expect (FormulaTypeMismatch fml2) Prop t2
+  go (fml1 :\/: fml2) = do
+    t1 <- go fml1
+    expect (FormulaTypeMismatch fml1) Prop t1
+    t2 <- go fml2
+    expect (FormulaTypeMismatch fml2) Prop t2
+  go (fml1 :==>: fml2) = do
+    t1 <- go fml1
+    expect (FormulaTypeMismatch fml1) Prop t1
+    t2 <- go fml2
+    expect (FormulaTypeMismatch fml2) Prop t2
+  go (Forall v fml) = do
+    t <- go fml
+    expect (FormulaTypeMismatch fml) Prop t
+  go (Exist v fml) = do
+    t <- go fml
+    expect (FormulaTypeMismatch fml) Prop t
 
 --
 
@@ -111,6 +169,7 @@ data DeclSuspender m y
   | IllegalPredicateDeclaration Formula y
   | IllegalTermDeclaration Term y
   | HsFileLoadError InterpreterError y
+  | TypeError TypeInferenceError y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -121,16 +180,25 @@ instance Show (DeclSuspender m y) where
   show (IllegalTermDeclaration t _) = "IllegalTermDeclaration: " ++ show t
   show (HsFileLoadError err _) = "HsFileLoadError: " ++ show err
   show (ComError e _) = "ComError: " ++ show e
+  show (TypeError err _) = show err
 
 toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
   let isVar (Var _) = True
       isVar _ = False
+  let typecheck fml u k = do {
+    env <- lift get;
+    case infer env fml of
+      Left err -> suspend $ TypeError err (return ())
+      Right typ | u == typ -> k
+      Right typ -> suspend $ TypeError (FormulaTypeMismatch fml u typ) (return ())
+  }
+ 
   decl <- suspend (DeclAwait return)
   case decl of
-    AxiomD idx fml -> do
+    AxiomD idx fml -> typecheck fml Prop $ do
       lift $ modify $ insertThm idx fml
-    ThmD idx fml (Proof coms) -> do
+    ThmD idx fml (Proof coms) -> typecheck fml Prop $ do
       lift $ modify $ \env -> env { proof = [] }
       runThmD idx fml coms
     ImportD path -> do
@@ -144,9 +212,9 @@ toplevelM = forever $ do
     PrintProof -> do
       env <- lift get
       liftIO $ putStrLn $ print_proof env
-    TermD trm -> case trm of
-      Var v -> lift $ modify $ \env -> env { terms = M.insert v 0 (terms env) }
-      Func f ts | all isVar ts -> lift $ modify $ \env -> env { terms = M.insert f (length ts) (terms env) }
+    TermD trm typ -> case trm of
+      Var v -> lift $ modify $ \env -> env { terms = M.insert v typ (terms env) }
+--      Func f ts | all isVar ts -> lift $ modify $ \env -> env { terms = M.insert f (length ts) (terms env) }
       z -> suspend $ IllegalTermDeclaration z (return ())
     HsFile file -> do
       r <- liftIO $ runInterpreter $ do

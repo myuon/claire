@@ -8,7 +8,12 @@ type Ident = String
 
 data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
-data Type = VarT Ident | ArrT Type Type | FuncT Ident [Type] deriving (Eq, Show)
+data Type
+  = VarT Ident
+  | ConT Ident [Type]
+  | ArrT Type Type
+  | Prop
+  deriving (Eq, Show)
 
 data Formula
   = Pred Ident [Term]

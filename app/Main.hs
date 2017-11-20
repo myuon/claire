@@ -13,7 +13,6 @@ main = do
   xs <- getArgs
   case (xs /= []) of
     True -> do
-      p <- readFile (head xs)
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
       putStrLn "= Predicates ="
       mapM_ print $ M.assocs $ preds env

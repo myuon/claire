@@ -8,7 +8,7 @@ data Env
   = Env
   { thms :: M.Map ThmIndex Formula
   , preds :: M.Map Ident Type
-  , terms :: M.Map Ident Int
+  , terms :: M.Map Ident Type
   , proof :: [(Command, String)]
   , newcommands :: M.Map Ident (Env -> [Judgement] -> Either String [Judgement])
   }

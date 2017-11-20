@@ -71,6 +71,7 @@ tokens :-
   $digit+   { \s -> TokenNumber (read s) }
   \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
   ```[^```]*```  { \s -> TokenHaskellCode s }
+  \' $alpha [$alpha $digit \_]*  { TokenTVar }
   $alpha [$alpha $digit \_ \']*      { TokenIdent }
 
 {
@@ -135,6 +136,7 @@ data Token
   | TokenIdent String
   | TokenStrLit String
   | TokenHaskellCode String
+  | TokenTVar String
   deriving (Eq, Show)
 }
 

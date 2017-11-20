@@ -73,6 +73,7 @@ import Claire.Parser.Lexer
   number    { TokenNumber $$ }
   strlit    { TokenStrLit $$ }
   ident     { TokenIdent $$ }
+  tvar 	    { TokenTVar $$ }
   haskell   { TokenHaskellCode $$ }
 
 %right '==>'
@@ -92,12 +93,12 @@ Decls
 
 Decl
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
-  | axiom ident ':' Formula  { AxiomD $2 $4 }
-  | import strlit  { ImportD $2 }
-  | predicate Formula ':' Type { PredD $2 $4 }
-  | print_proof  { PrintProof }
-  | term Term  { TermD $2 }
-  | Hs_file strlit  { HsFile $2 }
+  | axiom ident ':' Formula   	     { AxiomD $2 $4 }
+  | import strlit   		     { ImportD $2 }
+  | predicate Formula ':' Type       { PredD $2 $4 }
+  | print_proof       	  	     { PrintProof }
+  | term Term ':' Type  	     { TermD $2 $4 }
+  | Hs_file strlit  		     { HsFile $2 }
 
 Proof
   : {- empty -}  { Proof [] }
@@ -185,10 +186,11 @@ Term
   | ident '(' Terms ')'  { Func $1 $3 }
 
 Type
-  : ident  { VarT $1 }
-  | ident '(' Types ')'  { FuncT $1 $3 }
-  | Type '=>' Type  { ArrT $1 $3 }
-  | '(' Type ')'  { $2 }
+  : tvar			{ VarT $1 }
+  | ident 			{ ConT $1 [] }
+  | ident '(' Types ')'		{ ConT $1 $3 }
+  | Type '=>' Type  		{ ArrT $1 $3 }
+  | '(' Type ')'  		{ $2 }
 
 Types
   : Type  { [$1] }

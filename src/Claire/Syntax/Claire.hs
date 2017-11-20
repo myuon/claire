@@ -22,7 +22,7 @@ data Decl
   | ImportD String
   | PredD Formula Type
   | PrintProof
-  | TermD Term
+  | TermD Term Type
   | HsFile String
   deriving Show
 
