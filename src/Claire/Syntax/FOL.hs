@@ -37,6 +37,13 @@ data Predicate
   | PredFml Formula
   deriving (Show)
 
+fvT :: Type -> S.Set Ident
+fvT = go where
+  go (VarT v) = S.singleton v
+  go (ConT _ ts) = S.unions $ fmap fvT ts
+  go (ArrT t1 t2) = go t1 `S.union` go t2
+  go Prop = S.empty
+
 fv :: Formula -> S.Set Ident
 fv = go where
   fvt (Var v) = S.singleton v
