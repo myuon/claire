@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Claire.Syntax.FOL where
 
@@ -11,10 +13,10 @@ data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
 
 data TypeForm a
   = VarT a
-  | ConT a [Type]
+  | ConT Ident [TypeForm a]
   | ArrT (TypeForm a) (TypeForm a)
   | Prop
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 type Type = TypeForm Ident
 
@@ -37,12 +39,21 @@ data Predicate
   | PredFml Formula
   deriving (Show)
 
-fvT :: Type -> S.Set Ident
+fvT :: Ord a => TypeForm a -> S.Set a
 fvT = go where
   go (VarT v) = S.singleton v
   go (ConT _ ts) = S.unions $ fmap fvT ts
   go (ArrT t1 t2) = go t1 `S.union` go t2
   go Prop = S.empty
+
+substType :: Eq a => a -> TypeForm a -> TypeForm a -> TypeForm a
+substType x t' = go where
+  go (VarT y)
+    | x == y = t'
+    | otherwise = VarT y
+  go (ConT y ts) = ConT y (fmap go ts)
+  go (ArrT y1 y2) = ArrT (go y1) (go y2)
+  go Prop = Prop
 
 fv :: Formula -> S.Set Ident
 fv = go where
