@@ -9,7 +9,7 @@ data Env
   { thms :: M.Map ThmIndex Formula
   , types :: M.Map Ident Type
   , proof :: [(Command, String)]
-  , newcommands :: M.Map Ident (Env -> [Judgement] -> Either String [Judgement])
+  , newcommands :: M.Map Ident (Env -> Argument -> [Judgement] -> IO [Judgement])
   }
 
 instance Show Env where

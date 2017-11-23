@@ -23,7 +23,12 @@ tokens :-
   ","       { \s -> TokenComma }
   "("       { \s -> TokenLParen }
   ")"       { \s -> TokenRParen }
+  "{"       { \s -> TokenLBrace }
+  "}"       { \s -> TokenRBrace }
   "["       { \s -> TokenLBracket }
+  "p["      { \s -> TokenPLBracket }
+  "t["      { \s -> TokenTLBracket }
+  "i["      { \s -> TokenILBracket }
   "]"       { \s -> TokenRBracket }
   "~"       { \s -> TokenTilda }
   [\n]      { \s -> TokenNewline }
@@ -88,7 +93,12 @@ data Token
   | TokenComma
   | TokenLParen
   | TokenRParen
+  | TokenLBrace
+  | TokenRBrace
   | TokenLBracket
+  | TokenPLBracket
+  | TokenTLBracket
+  | TokenILBracket
   | TokenRBracket
   | TokenTilda
   | TokenNewline

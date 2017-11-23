@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Claire.Checker where
@@ -7,8 +8,10 @@ import Control.Monad.Catch
 import Control.Monad.Except
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
+import Control.Exception.Base (ErrorCall)
 import qualified Data.Sequence as S
 import qualified Data.Map as M
+import Data.Foldable
 import Language.Haskell.Interpreter hiding (get, infer)
 import System.FilePath
 
@@ -53,56 +56,78 @@ judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
 
 data ComSuspender y
   = ComAwait (Command -> y)
-  | CannotApply Rule [Judgement] y
-  | CannotInstantiate SomeException y
-  | CommandError String String y
+  | CommandError Ident SomeException y
   deriving (Functor)
 
 instance Show (ComSuspender y) where
   show (ComAwait _) = "ComAwait"
-  show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
-  show (CannotInstantiate err _) = show err
-  show (CommandError com err _) = "CommandError(" ++ com ++ "): " ++ err
+  show (CommandError com err _) = com ++ ": " ++ show err
+
+data CommandError
+  = NoSuchTheorem Ident
+  | CannotApply Rule [Judgement]
+  | CannotInstantiate SomeException
+  | NewCommandError Argument SomeException
+  | NoSuchCommand
+  deriving (Show)
+
+instance Exception CommandError
+
+comrunner :: (Monad m, MonadIO m) => Env -> [Command] -> StateT [Judgement] m ()
+comrunner env = go (commandM env) where
+  go cr cs = do
+    r <- resume cr
+    case r of
+      Left (ComAwait k) -> case cs of
+                             [] -> return ()
+                             (c:cs') -> go (k c) cs'
+      Left err -> liftIO $ throwM $ (error $ show err :: ErrorCall)
+      Right () -> return ()
 
 commandM :: (Monad m, MonadIO m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
   com <- suspend $ ComAwait return
+  let insts fml pairs = foldlM (\f (idt,pred) -> substPred ('?':idt) pred f) fml pairs
+  
   case com of
     Apply rs -> do
       js <- lift get
       case judge env rs js of
         Left (r,js') -> do
-          suspend $ CannotApply r js' (return ())
+          suspend $ CommandError "apply" (toException $ CannotApply r js') (return ())
           commandM env
         Right js' -> lift $ put js'
     NoApply r -> do
       js <- lift get
       case judge env [r] js of
         Left (r,js') -> do
-          suspend $ CannotApply r js' (return ())
+          suspend $ CommandError "noapply" (toException $ CannotApply r js') (return ())
           commandM env
         Right js' -> do
           liftIO $ putStrLn $ "= NoApply " ++ show r ++ " result"
           liftIO $ mapM_ print js'
           liftIO $ putStrLn $ "=\n"
-    Use idx | idx `M.member` thms env -> do
+    Use idx pairs | idx `M.member` thms env -> do
       let fml = thms env M.! idx
-      lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
-    Use idx -> suspend $ CommandError (show $ Use idx) "No such theorem" (return ())
+      case insts fml pairs of
+        Right r -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> r) props : js
+        Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
+    Use idx pairs -> suspend $ CommandError "use" (toException $ NoSuchTheorem idx) (return ())
     Inst idt pred -> do
       js <- lift get
       case js of
-        [] -> suspend $ CannotInstantiate (error "empty judgement") (return ())
+        [] -> suspend $ CommandError "inst" (toException (error "empty judgement" :: ErrorCall)) (return ())
         (Judgement (assms S.:|> assm) props : js') -> do
           case substPred ('?':idt) pred assm of
             Right r -> lift $ put $ Judgement (assms S.:|> r) props : js'
-            Left err -> suspend $ CannotInstantiate err (return ())
-    NewCommand com | M.member com (newcommands env) -> do
+            Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
+    NewCommand com args | M.member com (newcommands env) -> do
       js <- lift get
-      case (newcommands env M.! com) env js of
-        Left err -> suspend $ CommandError com err (return ())
+      r <- liftIO $ (Right <$> (newcommands env M.! com) env args js) `catch` \(e :: SomeException) -> throwM e
+      case r of
         Right js' -> lift $ put js'
-    NewCommand com -> suspend $ CommandError com "No such command" (return ())
+        Left err -> suspend $ CommandError com err (return ())
+    NewCommand com args -> suspend $ CommandError com (toException NoSuchCommand) (return ())
 
   js <- lift get
   unless (null js) $ commandM env
@@ -164,7 +189,7 @@ toplevelM = forever $ do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]
         setTopLevelModules [takeBaseName file]
-        interpret "export" (as :: [(String, Env -> [Judgement] -> Either String [Judgement])])
+        interpret "export" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
       case r of
         Left err -> suspend $ HsFileLoadError err (return ())
         Right mp -> lift $ modify $ \env -> env { newcommands = M.union (M.fromList mp) (newcommands env) }
@@ -183,7 +208,6 @@ toplevelM = forever $ do
           env <- lift get
           (result,js') <- lift $ lift $ runStateT (resume machine) js
 
-          let err_handle = \z cont -> suspend (ComError z (return ())) >> go cont js coms
           case result of
             Right () -> return ()
             Left (ComAwait cont) -> do
@@ -193,9 +217,7 @@ toplevelM = forever $ do
                   go (suspend $ ComAwait cont) js' [com']
                 (c:cs) -> do
                   go (cont c) js' cs
-            Left (z@(CannotApply _ _ cont)) -> err_handle z cont
-            Left (z@(CannotInstantiate _ cont)) -> err_handle z cont
-            Left (z@(CommandError _ _ cont)) -> err_handle z cont
+            Left (z@(CommandError _ _ cont)) -> suspend (ComError z (return ())) >> go cont js coms
 
 claire :: Env -> [Decl] -> IO Env
 claire = go toplevelM where

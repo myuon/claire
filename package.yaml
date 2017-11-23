@@ -29,6 +29,7 @@ default-extensions:
 ghc-options:
 - -Wunused-imports
 - -Wunused-local-binds
+- -O2
 
 extra-source-files:
 - src/Claire/Parser/Lexer.x

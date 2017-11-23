@@ -1,5 +1,23 @@
 Hs_file "lib/Commands.hs"
 
+theorem Curry: (P ==> Q ==> R) ==> (P /\ Q ==> R)
+proof
+  apply (ImpR, ImpR, PL 0, ImpL, AndL1)
+  assumption
+  implyR
+  apply (AndL2)
+  assumption
+qed
+
+theorem Uncurry: (P /\ Q ==> R) ==> (P ==> Q ==> R)
+proof
+  apply (ImpR, ImpR, ImpR, PL 0)
+  implyR
+  apply (AndR)
+  assumption
+  assumption
+qed
+
 # equivalence relation
 predicate eq: 'a => 'a => prop
 
@@ -39,7 +57,8 @@ proof
   assumption
 qed
 
-# trueprop
+Hs_file "lib/EqCommands.hs"
+
 predicate T : bool => prop
 
 # true, false
@@ -48,8 +67,21 @@ term false : bool
 
 axiom bool_induction: P(true) ==> P(false) ==> P(b)
 
-axiom topI: T(true)
-axiom bottomE: T(false) ==> T(P)
+axiom trueT: T(true)
+axiom falseT: T(false) ==> P
+
+theorem T_true: T(p) ==> eq(p,true)
+proof
+  genR i[p]
+  apply (ForallR b)
+  use bool_induction {P: p => T(p) ==> eq(p,true)}
+  implyL i[Curry {P: T(true) ==> eq(true,true), Q: T(false) ==> eq(false,true), R: T(b) ==> eq(b,true)}]
+  implyR
+  apply (AndR, ImpR)
+  refl t[true]
+  use falseT {P: eq(false,true)}
+  apply I
+qed
 
 # and, or
 term and : bool => bool => bool
@@ -69,6 +101,11 @@ term imp : bool => bool => bool
 axiom impI: (T(P) ==> T(Q)) ==> T(imp(P,Q))
 axiom impE: T(imp(P,Q)) ==> T(P) ==> T(Q)
 
+theorem true_imp: eq(imp(true,q),q)
+proof
+  
+qed
+
 # forall, exist
 term forall : bool => bool => bool
 term exist : bool => bool => bool
@@ -84,4 +121,6 @@ term not : bool => bool
 axiom not_def: eq(not(P),imp(P,false))
 
 axiom abs: (T(not(P)) ==> T(false)) ==> T(P)
+
+theorem not_true: eq(not(true),false)
 

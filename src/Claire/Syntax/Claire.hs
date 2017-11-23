@@ -8,12 +8,21 @@ type ThmIndex = String
 data Laire = Laire [Decl]
   deriving (Show)
 
+type Pairs = [(Ident,Predicate)]
+
 data Command
   = Apply [Rule]
-  | Use ThmIndex
+  | Use ThmIndex Pairs
   | Inst Ident Predicate
   | NoApply Rule
-  | NewCommand Ident
+  | NewCommand Ident Argument
+  deriving (Show)
+
+data Argument
+  = ArgEmpty
+  | ArgPreds [Predicate]
+  | ArgTerms [Term]
+  | ArgIdents [(Ident,Pairs)]
   deriving (Show)
 
 data Decl
