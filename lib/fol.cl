@@ -1,7 +1,7 @@
 Hs_file "lib/Commands.hs"
 
 # equivalence relation
-predicate eq(x,y)
+predicate eq: 'a => 'a => prop
 
 axiom refl: eq(r,r)
 axiom subst: eq(a,b) ==> P(a) ==> P(b)
@@ -40,37 +40,48 @@ proof
 qed
 
 # trueprop
-term T(x)
+predicate T : bool => prop
 
-# forall, true, false
-term forall(x,y)
-term true
-term false
+# true, false
+term true : bool
+term false : bool
 
-axiom T_def: eq(T(p),eq(p,true))
+axiom bool_induction: P(true) ==> P(false) ==> P(b)
+
+axiom topI: T(true)
+axiom bottomE: T(false) ==> T(P)
+
+# and, or
+term and : bool => bool => bool
+term or : bool => bool => bool
+
+axiom andI: T(P) ==> T(Q) ==> T(and(P,Q))
+axiom andE1: T(and(P,Q)) ==> T(P)
+axiom andE2: T(and(P,Q)) ==> T(Q)
+
+axiom orI1: T(P) ==> T(or(P,Q))
+axiom orI2: T(Q) ==> T(or(P,Q))
+axiom orE: T(or(P,Q)) ==> (T(P) ==> T(R)) ==> (T(Q) ==> T(R)) ==> T(R)
+
+# imp
+term imp : bool => bool => bool
+
+axiom impI: (T(P) ==> T(Q)) ==> T(imp(P,Q))
+axiom impE: T(imp(P,Q)) ==> T(P) ==> T(Q)
+
+# forall, exist
+term forall : bool => bool => bool
+term exist : bool => bool => bool
 
 axiom forallI: T(P(x)) ==> T(forall(x,P(x)))
 axiom forallE: T(forall(x,P(x))) ==> T(P(t))
-axiom true_def: eq(true, forall(x,eq(x,x)))
-axiom false_def: eq(false, forall(x,x))
 
-# imp
-term imp(x,y)
+axiom existI: T(P(t)) ==> T(exist(x,P(x)))
+axiom existE: T(exist(x,P(x))) ==> (T(P(x)) ==> T(Q)) ==> T(Q)
 
-axiom impI: (T(P) ==> T(Q)) ==> T(imp(P,Q))
-axiom impE: T(imp(P,Q)) ==> (T(P) ==> T(Q))
+# not
+term not : bool => bool
+axiom not_def: eq(not(P),imp(P,false))
 
-# not, and, or
-term not(x)
-term and(x,y)
-term or(x,y)
-
-axiom not_def: eq(not(P), imp(P,false))
-axiom and_def: eq(and(P,Q), not(imp(P,not(Q))))
-axiom or_def: eq(or(P,Q), not(and(not(P), not(Q))))
-
-# exist
-term exist(x,y)
-
-axiom exist_def: eq(exist(x,P(x)), not(forall(x,P(x))))
+axiom abs: (T(not(P)) ==> T(false)) ==> T(P)
 

@@ -1,49 +1,13 @@
-module Claire.Laire
-  ( Rule(..)
-  , Judgement(..)
-
-  , module Claire.Laire.Syntax
-  , pLaire
-  , pDecl
-  , pCommand
-  , pFormula
-  , pTerm
-
-  , Env(..)
-  , insertThm
-  , print_proof
-  , defEnv
-  , fp
-  , metagen
-  ) where
+module Claire.Env where
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Claire.Laire.Syntax
-import Claire.Laire.Lexer
-import Claire.Laire.Parser
-
-pLaire :: String -> Laire
-pLaire = laireparser . alexScanTokens
-
-pDecl :: String -> Decl
-pDecl = declparser . alexScanTokens
-
-pCommand :: String -> Command
-pCommand = comparser . alexScanTokens
-
-pFormula :: String -> Formula
-pFormula = folparser . alexScanTokens
-
-pTerm :: String -> Term
-pTerm = termparser . alexScanTokens
-
+import Claire.Syntax
 
 data Env
   = Env
   { thms :: M.Map ThmIndex Formula
-  , preds :: M.Map Ident Int
-  , terms :: M.Map Ident Int
+  , types :: M.Map Ident Type
   , proof :: [(Command, String)]
   , newcommands :: M.Map Ident (Env -> [Judgement] -> Either String [Judgement])
   }
@@ -52,8 +16,7 @@ instance Show Env where
   show env = unlines
     [ "Env{"
     , "thms = " ++ show (thms env)
-    , "preds = " ++ show (preds env)
-    , "terms = " ++ show (terms env)
+    , "types = " ++ show (types env)
     , "proof = " ++ show (proof env)
     , "newcommands: " ++ show (M.keys $ newcommands env)
     , "}" ]
@@ -62,7 +25,7 @@ insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
 
 defEnv :: Env
-defEnv = Env M.empty M.empty M.empty [] M.empty
+defEnv = Env M.empty M.empty [] M.empty
 
 print_proof :: Env -> String
 print_proof env = unlines $
@@ -78,7 +41,7 @@ print_proof env = unlines $
 fp :: Env -> Formula -> S.Set Ident
 fp env = go where
   go (Pred p ts)
-    | p `elem` M.keys (preds env) = S.empty
+    | p `elem` M.keys (types env) = S.empty
     | otherwise = S.singleton p
   go Top = S.empty
   go Bottom = S.empty
@@ -91,7 +54,7 @@ fp env = go where
 metagen :: Env -> Formula -> Formula
 metagen env = go where
   go (Pred p ts)
-    | p `elem` M.keys (preds env) = Pred p ts
+    | p `elem` M.keys (types env) = Pred p ts
     | otherwise = Pred ('?' : p) ts
   go Top = Top
   go Bottom = Bottom

@@ -1,5 +1,5 @@
 {
-module Claire.Laire.Lexer where
+module Claire.Parser.Lexer where
 
 }
 
@@ -68,9 +68,11 @@ tokens :-
   CR        { \s -> TokenCR }
   PL        { \s -> TokenPL }
   PR        { \s -> TokenPR }
+  prop	    { \s -> TokenProp }
   $digit+   { \s -> TokenNumber (read s) }
   \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
   ```[^```]*```  { \s -> TokenHaskellCode s }
+  \' $alpha [$alpha $digit \_]*  { TokenTVar }
   $alpha [$alpha $digit \_ \']*      { TokenIdent }
 
 {
@@ -131,10 +133,12 @@ data Token
   | TokenCR
   | TokenPL
   | TokenPR
+  | TokenProp
   | TokenNumber Int
   | TokenIdent String
   | TokenStrLit String
   | TokenHaskellCode String
+  | TokenTVar String
   deriving (Eq, Show)
 }
 

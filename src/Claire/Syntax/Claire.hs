@@ -1,7 +1,7 @@
-module Claire.Laire.Syntax.Laire where
+module Claire.Syntax.Claire where
 
-import Claire.Laire.Syntax.FOL
-import Claire.Laire.Syntax.LK
+import Claire.Syntax.FOL
+import Claire.Syntax.LK
 
 type ThmIndex = String
 
@@ -20,9 +20,9 @@ data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
   | ImportD String
-  | PredD Formula
+  | PredD Formula Type
   | PrintProof
-  | TermD Term
+  | TermD Term Type
   | HsFile String
   deriving Show
 
