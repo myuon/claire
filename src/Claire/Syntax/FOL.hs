@@ -105,7 +105,7 @@ substPred idt pred = go where
   go (Forall v fml) = Forall v <$> (go fml)
   go (Exist v fml) = Exist v <$> (go fml)
 
-  beta [] (PredFun [] p) = beta [] p
+  beta xs (PredFun [] p) = beta xs p
   beta [] (z@(PredFun _ _)) = throwM $ ArgumentsNotFullyApplied z
   beta [] (PredFml fml) = return fml
   beta (x:xs) (PredFun (t:ts) fml) = beta xs (PredFun ts $ sbterm t x fml)

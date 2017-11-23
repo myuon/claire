@@ -46,6 +46,8 @@ predicate T : bool => prop
 term true : bool
 term false : bool
 
+axiom bool_induction: P(true) ==> P(false) ==> P(b)
+
 axiom topI: T(true)
 axiom bottomE: T(false) ==> T(P)
 

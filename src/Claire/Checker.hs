@@ -4,6 +4,7 @@ module Claire.Checker where
 
 import Control.Monad.State.Strict
 import Control.Monad.Catch
+import Control.Monad.Except
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import qualified Data.Sequence as S
@@ -131,10 +132,11 @@ toplevelM = forever $ do
       isVar _ = False
   let typecheck fml u k = do {
     env <- lift get;
-    case infer env fml of
+    utyp <- liftIO $ runExceptT (infer env fml);
+    case utyp of
       Left err -> suspend $ TypeError err (return ())
       Right typ | u == typ -> k
-      Right typ -> suspend $ TypeError (toException $ FormulaTypeMismatch fml u typ) (return ())
+      Right typ -> suspend $ TypeError (toException $ UnificationFailed u typ) (return ())
   }
  
   decl <- suspend (DeclAwait return)
@@ -150,13 +152,13 @@ toplevelM = forever $ do
       lift $ put $ env'
     PredD fml typ -> do
       case fml of
-        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { preds = M.insert p typ (preds env) }
+        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { types = M.insert p typ (types env) }
         z -> suspend $ IllegalPredicateDeclaration z (return ())
     PrintProof -> do
       env <- lift get
       liftIO $ putStrLn $ print_proof env
     TermD trm typ -> case trm of
-      Var v -> lift $ modify $ \env -> env { terms = M.insert v typ (terms env) }
+      Var v -> lift $ modify $ \env -> env { types = M.insert v typ (types env) }
 --      Func f ts | all isVar ts -> lift $ modify $ \env -> env { terms = M.insert f (length ts) (terms env) }
       z -> suspend $ IllegalTermDeclaration z (return ())
     HsFile file -> do

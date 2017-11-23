@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Claire.Typecheck where
 
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Monad.Catch
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -14,11 +14,12 @@ import Claire.Env
 
 type UType = TypeForm Int
 
-data InferError
+data TypeError
   = UnificationFailed UType UType
+  | NotFound Ident Env
   deriving (Show)
 
-instance Exception InferError
+instance Exception TypeError
 
 unify :: MonadThrow m => UType -> UType -> m (UType -> UType)
 unify x y | x == y = return $ id
@@ -56,16 +57,21 @@ utype t = evalStateT (go t) M.empty where
   go (ArrT x y) = liftM2 ArrT (go x) (go y)
   go (ConT con xs) = liftM (ConT con) (mapM go xs)
 
-inferT :: (MonadIO m, MonadThrow m) => M.Map Ident Type -> Term -> m UType
+inferT :: (MonadIO m, MonadThrow m) => Env -> Term -> StateT (M.Map Ident UType) m UType
 inferT env term = do
   typ0 <- VarT . hashUnique <$> liftIO newUnique
+  typecheckT env term typ0
 
+typecheckT :: (MonadIO m, MonadThrow m) => Env -> Term -> UType -> StateT (M.Map Ident UType) m UType
+typecheckT env term typ0 = do
   let step typ (x,y) = do {
         uf <- unify x y;
         return $ uf typ
         }
-  foldlM step typ0 =<< evalStateT (go term typ0) M.empty
+  foldlM step typ0 =<< findUnifsT env term typ0
 
+findUnifsT :: MonadIO m => Env -> Term -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))
+findUnifsT env = go
   where
     go :: MonadIO m => Term -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))
     go (Var v) typ = do
@@ -75,10 +81,62 @@ inferT env term = do
         else do
           modify $ M.insert v typ
           return S.empty
-    go (Func v ts) typ | M.member v env = do
-      vtyp <- utype $ env M.! v
+    go (Func v ts) typ | M.member v (types env) = do
+      vtyp <- utype $ types env M.! v
       tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
       qs <- zipWithM go ts tyts
       return $ S.insert (foldr ArrT typ tyts,vtyp) $ S.unions qs
+    go (Func v ts) typ = do
+      tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
+      qs <- zipWithM go ts tyts
+      modify $ M.insert v (foldr ArrT typ tyts)
+      return $ S.unions qs
 
+inferST :: (MonadIO m, MonadThrow m) => Env -> Formula -> StateT (M.Map Ident UType) m UType
+inferST env fml = do
+  typ0 <- VarT . hashUnique <$> liftIO newUnique
+
+  let step typ (x,y) = do {
+        uf <- unify x y;
+        return $ uf typ
+        }
+  foldlM step typ0 =<< go fml typ0
+
+  where
+    go :: (MonadIO m, MonadThrow m) => Formula -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))
+    go (Pred p ts) typ | M.member p (types env) = do
+      ptyp <- utype $ types env M.! p
+      tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
+      qs <- zipWithM (findUnifsT env) ts tyts
+      return $ S.insert (typ,Prop) $ S.insert (foldr ArrT typ tyts,ptyp) $ S.unions qs
+    go (Pred p ts) typ = do
+      tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
+      qs <- zipWithM (findUnifsT env) ts tyts
+      modify $ M.insert p (foldr ArrT typ tyts)
+      return $ S.insert (typ,Prop) $ S.unions qs
+    go Top typ = return $ S.singleton (typ,Prop)
+    go Bottom typ = return $ S.singleton (typ,Prop)
+    go (fml1 :/\: fml2) typ = do
+      eq1 <- go fml1 typ
+      eq2 <- go fml2 typ
+      return $ S.insert (typ,Prop) $ S.union eq1 eq2
+    go (fml1 :\/: fml2) typ = do
+      eq1 <- go fml1 typ
+      eq2 <- go fml2 typ
+      return $ S.insert (typ,Prop) $ S.union eq1 eq2
+    go (fml1 :==>: fml2) typ = do
+      eq1 <- go fml1 typ
+      eq2 <- go fml2 typ
+      return $ S.insert (typ,Prop) $ S.union eq1 eq2
+    go (Forall t fml) typ = do
+      eq <- go fml typ
+      return $ S.insert (typ,Prop) eq
+    go (Exist t fml) typ = do
+      eq <- go fml typ
+      return $ S.insert (typ,Prop) eq
+    -- forall と exist については型も宣言できるようにしておいて
+    -- その場合はcontextに追加する
+
+infer :: (MonadIO m, MonadThrow m) => Env -> Formula -> m UType
+infer env fml = evalStateT (inferST env fml) M.empty
 
