@@ -1,14 +1,18 @@
-theorem id: P ==> P
+theorem Curry: (P ==> Q ==> R) ==> (P /\ Q ==> R)
 proof
-  apply (ImpR; I)
+  apply (ImpR, ImpR, PL 1, ImpL, AndL1)
+  assumption
+  implyR
+  apply (AndL2)
+  assumption
 qed
 
-# lemmas for LK
-theorem deMorgan: (P /\ Q ==> Bottom) ==> ((P ==> Bottom) \/ (Q ==> Bottom))
+theorem Uncurry: (P /\ Q ==> R) ==> (P ==> Q ==> R)
 proof
-  apply (ImpR; ImpL; AndR)
-    apply (PR 1; OrR1; ImpR; WR; I)
-    apply (PR 1; OrR2; ImpR; WR; I)
-  apply BottomL
+  apply (ImpR, ImpR, ImpR, PL 2)
+  implyR
+  apply (AndR)
+  assumption
+  assumption
 qed
 
