@@ -69,6 +69,7 @@ import Claire.Parser.Lexer
   CR        { TokenCR }
   PL        { TokenPL }
   PR        { TokenPR }
+  prop	    { TokenProp }
   newline   { TokenNewline }
   number    { TokenNumber $$ }
   strlit    { TokenStrLit $$ }
@@ -186,7 +187,8 @@ Term
   | ident '(' Terms ')'  { Func $1 $3 }
 
 Type
-  : tvar			{ VarT $1 }
+  : prop			{ Prop }
+  | tvar			{ VarT $1 }
   | ident 			{ ConT $1 [] }
   | ident '(' Types ')'		{ ConT $1 $3 }
   | Type '=>' Type  		{ ArrT $1 $3 }

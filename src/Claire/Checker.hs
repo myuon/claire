@@ -159,7 +159,6 @@ toplevelM = forever $ do
       liftIO $ putStrLn $ print_proof env
     TermD trm typ -> case trm of
       Var v -> lift $ modify $ \env -> env { types = M.insert v typ (types env) }
---      Func f ts | all isVar ts -> lift $ modify $ \env -> env { terms = M.insert f (length ts) (terms env) }
       z -> suspend $ IllegalTermDeclaration z (return ())
     HsFile file -> do
       r <- liftIO $ runInterpreter $ do

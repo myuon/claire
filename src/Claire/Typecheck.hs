@@ -21,26 +21,36 @@ data TypeError
 
 instance Exception TypeError
 
-unify :: MonadThrow m => UType -> UType -> m (UType -> UType)
-unify x y | x == y = return $ id
-unify (ConT con1 xs) (ConT con2 ys)
-  | con1 == con2 && length xs == length ys = do
-      let go (x,y) sbt = do {
-            uf <- unify (sbt x) (sbt y);
-            return $ uf . sbt
-            }
-      foldrM go id (zip xs ys)
-  | otherwise = throwM $ UnificationFailed (ConT con1 xs) (ConT con2 ys)
-unify (ArrT x1 x2) (ArrT y1 y2) = do
-  unif2 <- unify x2 y2
-  unif1 <- unify (unif2 x1) (unif2 y1)
-  return $ unif1 . unif2
-unify (VarT i) t
-  | i `notElem` fvT t = return $ substType i t
-  | VarT i == t = return $ id
-  | otherwise = throwM $ UnificationFailed (VarT i) t
-unify t (VarT i) = unify (VarT i) t
-unify x y = throwM $ UnificationFailed x y  
+unify :: MonadThrow m => S.Set (UType,UType) -> m (UType -> UType)
+unify eqs | S.null eqs = return id
+unify eqs = do
+  let ((x,y),qs) = S.deleteFindMin eqs
+  f <- unify1 x y
+  let qs' = S.map (\(x,y) -> (f x,f y)) qs
+  fs <- unify qs'
+  return $ f . fs
+
+  where
+  unify1 :: MonadThrow m => UType -> UType -> m (UType -> UType)
+  unify1 x y | x == y = return $ id
+  unify1 (ConT con1 xs) (ConT con2 ys)
+    | con1 == con2 && length xs == length ys = do
+        let go (x,y) sbt = do {
+              uf <- unify1 (sbt x) (sbt y);
+              return $ uf . sbt
+              }
+        foldrM go id (zip xs ys)
+    | otherwise = throwM $ UnificationFailed (ConT con1 xs) (ConT con2 ys)
+  unify1 (ArrT x1 x2) (ArrT y1 y2) = do
+    unif2 <- unify1 x2 y2
+    unif1 <- unify1 (unif2 x1) (unif2 y1)
+    return $ unif1 . unif2
+  unify1 (VarT i) t
+    | i `notElem` fvT t = return $ substType i t
+    | VarT i == t = return $ id
+    | otherwise = throwM $ UnificationFailed (VarT i) t
+  unify1 t (VarT i) = unify1 (VarT i) t
+  unify1 x y = throwM $ UnificationFailed x y  
 
 utype :: MonadIO m => Type -> m UType
 utype t = evalStateT (go t) M.empty where
@@ -64,16 +74,16 @@ inferT env term = do
 
 typecheckT :: (MonadIO m, MonadThrow m) => Env -> Term -> UType -> StateT (M.Map Ident UType) m UType
 typecheckT env term typ0 = do
-  let step typ (x,y) = do {
-        uf <- unify x y;
-        return $ uf typ
-        }
-  foldlM step typ0 =<< findUnifsT env term typ0
+  f <- unify =<< findUnifsT env term typ0
+  return $ f typ0
 
 findUnifsT :: MonadIO m => Env -> Term -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))
 findUnifsT env = go
   where
     go :: MonadIO m => Term -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))
+    go (Var v) typ | M.member v (types env) = do
+      vtyp <- utype $ types env M.! v
+      return $ S.singleton (typ,vtyp)
     go (Var v) typ = do
       ctx <- get
       if M.member v ctx
@@ -95,12 +105,8 @@ findUnifsT env = go
 inferST :: (MonadIO m, MonadThrow m) => Env -> Formula -> StateT (M.Map Ident UType) m UType
 inferST env fml = do
   typ0 <- VarT . hashUnique <$> liftIO newUnique
-
-  let step typ (x,y) = do {
-        uf <- unify x y;
-        return $ uf typ
-        }
-  foldlM step typ0 =<< go fml typ0
+  f <- unify =<< go fml typ0
+  return $ f typ0
 
   where
     go :: (MonadIO m, MonadThrow m) => Formula -> UType -> StateT (M.Map Ident UType) m (S.Set (UType,UType))

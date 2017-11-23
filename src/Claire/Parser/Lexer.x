@@ -68,6 +68,7 @@ tokens :-
   CR        { \s -> TokenCR }
   PL        { \s -> TokenPL }
   PR        { \s -> TokenPR }
+  prop	    { \s -> TokenProp }
   $digit+   { \s -> TokenNumber (read s) }
   \"[^\\\"]*\"  { \s -> TokenStrLit (tail $ init s) }
   ```[^```]*```  { \s -> TokenHaskellCode s }
@@ -132,6 +133,7 @@ data Token
   | TokenCR
   | TokenPL
   | TokenPR
+  | TokenProp
   | TokenNumber Int
   | TokenIdent String
   | TokenStrLit String
