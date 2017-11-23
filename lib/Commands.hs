@@ -2,7 +2,6 @@ module Commands where
 
 import Control.Monad.State.Strict
 import Control.Monad.Catch
-import qualified Data.Sequence as S
 import Data.List
 import GHC.Exts (toList)
 import Claire
@@ -16,17 +15,17 @@ data BasicComError
 instance Exception BasicComError
 
 onlyL :: Int -> Int -> [Rule]
-onlyL i n = concat $ replicate (n-i-1) [WL] ++ replicate i [PL 0, WL]
+onlyL i n = concat $ replicate i [WL] ++ replicate (n-i-1) [PL 1, WL]
 
 onlyR :: Int -> Int -> [Rule]
 onlyR i n = concat $ replicate i [WR] ++ replicate (n-i-1) [PR 1, WR]
 
 assumption :: Env -> Argument -> [Judgement] -> IO [Judgement]
-assumption env ArgEmpty (js@(Judgement assms props:_)) = case S.findIndexL (`elem` toList assms) props of
+assumption env ArgEmpty (js@(Judgement assms props:_)) = case findIndex (`elem` toList assms) props of
   Nothing -> throwM $ CannotSolve js
   Just i ->
     let Just j = elemIndex (toList props !! i) (toList assms)
-    in return $ either (\_ -> throwM $ FailedToApply) id $ judge env (onlyR i (S.length props) ++ onlyL j (S.length assms) ++ [I]) js
+    in return $ either (\_ -> throwM $ FailedToApply) id $ judge env (onlyR i (length props) ++ onlyL j (length assms) ++ [I]) js
 assumption env arg _ = throwM $ WrongArgument arg
 
 defer :: Env -> Argument -> [Judgement] -> IO [Judgement]
@@ -84,7 +83,7 @@ implyL env ArgEmpty js = execStateT (comrunner env coms) js
     coms =
       [ Apply [ImpL]
       , NewCommand "assumption" ArgEmpty
-      , Apply [PL 0, WL]
+      , Apply [PL 1, WL]
       ]
 implyL env (ArgIdents [(i,ps)]) js = implyL env ArgEmpty =<< execStateT (comrunner env [Use i ps]) js
 implyL env arg _ = throwM $ WrongArgument arg
@@ -108,7 +107,7 @@ apply (PR 1, WR)
   assms, |- Forall a. P(a), props
 -}
 genR :: Env -> Argument -> [Judgement] -> IO [Judgement]
-genR env (ArgIdents [(i,[])]) (js@(Judgement _ (p S.:<| _):_)) = execStateT (comrunner env coms) js
+genR env (ArgIdents [(i,[])]) (js@(Judgement _ (p:_):_)) = execStateT (comrunner env coms) js
   where
     coms =
       [ Apply [Cut $ Forall i p]
@@ -135,7 +134,7 @@ apply (PL 1, WR)
   assms, Forall a. P(a) |- props
 -}
 genL :: Env -> Argument -> [Judgement] -> IO [Judgement]
-genL env (ArgIdents [(i,[])]) (js@(Judgement (ps S.:|> p) _:_)) = execStateT (comrunner env coms) js
+genL env (ArgIdents [(i,[])]) (js@(Judgement (p:ps) _:_)) = execStateT (comrunner env coms) js
   where
     coms =
       [ Apply [Cut $ Forall i p]

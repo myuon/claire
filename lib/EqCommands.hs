@@ -2,9 +2,6 @@ module EqCommands where
 
 import Control.Monad.State.Strict
 import Control.Monad.Catch
-import qualified Data.Sequence as S
-import Data.List
-import GHC.Exts (toList)
 import Claire
 
 data EqComError

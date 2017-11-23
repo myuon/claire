@@ -9,7 +9,6 @@ import Control.Monad.Except
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import Control.Exception.Base (ErrorCall)
-import qualified Data.Sequence as S
 import qualified Data.Map as M
 import Data.Foldable
 import Language.Haskell.Interpreter hiding (get, infer)
@@ -22,35 +21,37 @@ import Claire.Typecheck
 
 
 newGoal :: Formula -> [Judgement]
-newGoal fml = [Judgement S.empty (S.singleton fml)]
+newGoal fml = [Judgement [] (return fml)]
 
 judge :: Env -> [Rule] -> [Judgement] -> Either (Rule, [Judgement]) [Judgement]
 judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
-  go I (Judgement assms props : js) | S.length assms == 1 && assms == props = Right js
-  go (Cut fml) (Judgement assms props : js) = Right $ Judgement assms (fml S.:<| props) : Judgement (assms S.:|> fml) props : js
-  go AndL1 (Judgement (assms S.:|> (fa :/\: fb)) props : js) = Right $ Judgement (assms S.:|> fa) props : js
-  go AndL2 (Judgement (assms S.:|> (fa :/\: fb)) props : js) = Right $ Judgement (assms S.:|> fb) props : js
-  go AndR (Judgement assms ((fa :/\: fb) S.:<| props) : js) = Right $ Judgement assms (fa S.:<| props) : Judgement assms (fb S.:<| props) : js
-  go OrL (Judgement (assms S.:|> (fa :\/: fb)) props : js) = Right $ Judgement (assms S.:|> fa) props : Judgement (assms S.:|> fb) props : js
-  go OrR1 (Judgement assms ((fa :\/: fb) S.:<| props) : js) = Right $ Judgement assms (fa S.:<| props) : js
-  go OrR2 (Judgement assms ((fa :\/: fb) S.:<| props) : js) = Right $ Judgement assms (fb S.:<| props) : js
-  go ImpL (Judgement (assms S.:|> (fa :==>: fb)) props : js) = Right $ Judgement assms (fa S.:<| props) : Judgement (assms S.:|> fb) props : js
-  go ImpR (Judgement assms ((fa :==>: fb) S.:<| props) : js) = Right $ Judgement (assms S.:|> fa) (fb S.:<| props) : js
-  go BottomL (Judgement (assms S.:|> Bottom) props : js) = Right js
-  go TopR (Judgement assms (Top S.:<| props) : js) = Right js
-  go (ForallL t) (Judgement (assms S.:|> Forall x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x t fml) props : js
-  go (ForallR y) (Judgement assms (Forall x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x (Var y) fml S.:<| props) : js
-  go (ExistL y) (Judgement (assms S.:|> Exist x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x (Var y) fml) props : js
-  go (ExistR t) (Judgement assms (Exist x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x t fml S.:<| props) : js
+  go I (Judgement assms props : js) | length assms == 1 && assms == props = Right js
+  go (Cut fml) (Judgement assms props : js) = Right $ Judgement assms (fml:props) : Judgement (fml:assms) props : js
+  go AndL1 (Judgement ((fa :/\: fb):assms) props : js) = Right $ Judgement (fa:assms) props : js
+  go AndL2 (Judgement ((fa :/\: fb):assms) props : js) = Right $ Judgement (fb:assms) props : js
+  go AndR (Judgement assms ((fa :/\: fb):props) : js) = Right $ Judgement assms (fa:props) : Judgement assms (fb:props) : js
+  go OrL (Judgement ((fa :\/: fb):assms) props : js) = Right $ Judgement (fa:assms) props : Judgement (fb:assms) props : js
+  go OrR1 (Judgement assms ((fa :\/: fb):props) : js) = Right $ Judgement assms (fa:props) : js
+  go OrR2 (Judgement assms ((fa :\/: fb):props) : js) = Right $ Judgement assms (fb:props) : js
+  go ImpL (Judgement ((fa :==>: fb):assms) props : js) = Right $ Judgement assms (fa:props) : Judgement (fb:assms) props : js
+  go ImpR (Judgement assms ((fa :==>: fb):props) : js) = Right $ Judgement (fa:assms) (fb:props) : js
+  go BottomL (Judgement (Bottom:assms) props : js) = Right js
+  go TopR (Judgement assms (Top:props) : js) = Right js
+  go (ForallL t) (Judgement (Forall x fml:assms) props : js) = Right $ Judgement (substTerm x t fml:assms) props : js
+  go (ForallR y) (Judgement assms (Forall x fml:props) : js) = Right $ Judgement assms (substTerm x (Var y) fml:props) : js
+  go (ExistL y) (Judgement (Exist x fml:assms) props : js) = Right $ Judgement (substTerm x (Var y) fml:assms) props : js
+  go (ExistR t) (Judgement assms (Exist x fml:props) : js) = Right $ Judgement assms (substTerm x t fml:props) : js
 
-  go WL (Judgement (assms S.:|> _) props : js) = Right $ Judgement assms props : js
-  go WR (Judgement assms (_ S.:<| props) : js) = Right $ Judgement assms props : js
-  go CL (Judgement (assms S.:|> fml) props : js) = Right $ Judgement (assms S.:|> fml S.:|> fml) props : js
-  go CR (Judgement assms (fml S.:<| props) : js) = Right $ Judgement assms (fml S.:<| fml S.:<| props) : js
-  go (PL k) (Judgement assms props : js) | k < S.length assms = Right $ Judgement (S.deleteAt k assms S.:|> S.index assms k) props : js
-  go (PR k) (Judgement assms props : js) | k < S.length props = Right $ Judgement assms (S.index props k S.:<| S.deleteAt k props) : js
+  go WL (Judgement (_:assms) props : js) = Right $ Judgement assms props : js
+  go WR (Judgement assms (_:props) : js) = Right $ Judgement assms props : js
+  go CL (Judgement (fml:assms) props : js) = Right $ Judgement (fml:fml:assms) props : js
+  go CR (Judgement assms (fml:props) : js) = Right $ Judgement assms (fml:fml:props) : js
+  go (PL k) (Judgement assms props : js) | k < length assms = Right $ Judgement (assms !! k : deleteAt k assms) props : js
+  go (PR k) (Judgement assms props : js) | k < length props = Right $ Judgement assms (props !! k : deleteAt k props) : js
 
   go r js = Left (r,js)
+
+  deleteAt k xs = take k xs ++ drop (k+1) xs
 
 --
 
@@ -110,16 +111,16 @@ commandM env = do
     Use idx pairs | idx `M.member` thms env -> do
       let fml = thms env M.! idx
       case insts fml pairs of
-        Right r -> lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> r) props : js
+        Right r -> lift $ modify $ \(Judgement assms props : js) -> Judgement (r:assms) props : js
         Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
     Use idx pairs -> suspend $ CommandError "use" (toException $ NoSuchTheorem idx) (return ())
     Inst idt pred -> do
       js <- lift get
       case js of
         [] -> suspend $ CommandError "inst" (toException (error "empty judgement" :: ErrorCall)) (return ())
-        (Judgement (assms S.:|> assm) props : js') -> do
+        (Judgement (assm:assms) props : js') -> do
           case substPred ('?':idt) pred assm of
-            Right r -> lift $ put $ Judgement (assms S.:|> r) props : js'
+            Right r -> lift $ put $ Judgement (r:assms) props : js'
             Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
     NewCommand com args | M.member com (newcommands env) -> do
       js <- lift get

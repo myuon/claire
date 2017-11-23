@@ -2,7 +2,7 @@ Hs_file "lib/Commands.hs"
 
 theorem Curry: (P ==> Q ==> R) ==> (P /\ Q ==> R)
 proof
-  apply (ImpR, ImpR, PL 0, ImpL, AndL1)
+  apply (ImpR, ImpR, PL 1, ImpL, AndL1)
   assumption
   implyR
   apply (AndL2)
@@ -11,7 +11,7 @@ qed
 
 theorem Uncurry: (P /\ Q ==> R) ==> (P ==> Q ==> R)
 proof
-  apply (ImpR, ImpR, ImpR, PL 0)
+  apply (ImpR, ImpR, ImpR, PL 2)
   implyR
   apply (AndR)
   assumption
