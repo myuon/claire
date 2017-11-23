@@ -44,10 +44,9 @@ import Claire.Parser.Lexer
   proof     { TokenProof }
   qed       { TokenQed }
   import    { TokenImport }
-  predicate { TokenPredicate }
   print_proof  { TokenPrintProof }
   Hs_file   { TokenHsFile }
-  term	    { TokenTerm }
+  constant  { TokenConstant }
   apply     { TokenApply }
   noapply   { TokenNoApply }
   use       { TokenUse }
@@ -101,9 +100,8 @@ Decl :: { Decl }
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula   	     { AxiomD $2 $4 }
   | import strlit   		     { ImportD $2 }
-  | predicate Formula ':' Type       { PredD $2 $4 }
   | print_proof       	  	     { PrintProof }
-  | term Term ':' Type  	     { TermD $2 $4 }
+  | constant ident ':' Type  	     { ConstD $2 $4 }
   | Hs_file strlit  		     { HsFile $2 }
 
 Proof :: { Proof }

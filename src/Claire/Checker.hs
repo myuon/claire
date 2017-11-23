@@ -154,8 +154,6 @@ instance Show (DeclSuspender m y) where
 
 toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
-  let isVar (Var _) = True
-      isVar _ = False
   let typecheck fml u k = do {
     env <- lift get;
     utyp <- liftIO $ runExceptT (infer env fml);
@@ -176,16 +174,11 @@ toplevelM = forever $ do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
-    PredD fml typ -> do
-      case fml of
-        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { types = M.insert p typ (types env) }
-        z -> suspend $ IllegalPredicateDeclaration z (return ())
+    ConstD p typ -> do
+      lift $ modify $ \env -> env { types = M.insert p typ (types env) }
     PrintProof -> do
       env <- lift get
       liftIO $ putStrLn $ print_proof env
-    TermD trm typ -> case trm of
-      Var v -> lift $ modify $ \env -> env { types = M.insert v typ (types env) }
-      z -> suspend $ IllegalTermDeclaration z (return ())
     HsFile file -> do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]

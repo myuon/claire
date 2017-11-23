@@ -14,7 +14,7 @@ main = do
   case (xs /= []) of
     True -> do
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
-      putStrLn "= Types ="
+      putStrLn "= Constants ="
       mapM_ print $ M.assocs $ types env
       putStrLn "= Proved Theorems ="
       mapM_ print $ M.assocs $ thms env

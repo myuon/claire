@@ -29,9 +29,8 @@ data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
   | ImportD String
-  | PredD Formula Type
   | PrintProof
-  | TermD Term Type
+  | ConstD Ident Type
   | HsFile String
   deriving Show
 
