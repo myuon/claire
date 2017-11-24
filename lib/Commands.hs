@@ -144,7 +144,7 @@ genL env (ArgIdents [(i,[])]) (js@(Judgement (p:ps) _:_)) = execStateT (comrunne
       ]
 genL env arg _ = throwM $ WrongArgument arg
 
-export =
+export_command =
   [ ("assumption", assumption)
   , ("defer", defer)
   , ("implyR", implyR)

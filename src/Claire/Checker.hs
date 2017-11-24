@@ -182,7 +182,7 @@ toplevelM = forever $ do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]
         setTopLevelModules [takeBaseName file]
-        interpret "export" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
+        interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
       case r of
         Left err -> suspend $ HsFileLoadError err (return ())
         Right mp -> lift $ modify $ \env -> env { newcommands = M.union (M.fromList mp) (newcommands env) }

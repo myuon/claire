@@ -39,7 +39,7 @@ refl env (ArgTerms [t]) js = execStateT (comrunner env coms) js
       ]
 refl env arg _ = throwM $ WrongArgument arg
 
-export =
+export_command =
   [ ("refl", refl)
   ]
 
