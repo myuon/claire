@@ -108,7 +108,7 @@ Decl :: { Decl }
 
 Arguments :: { [Argument] }
   : {- empty -}			{ [] }
-  | Argument Arguments		{ $1 : $2 }
+  | Argument ';' Arguments	{ $1 : $3 }
 
 Proof :: { Proof }
   : {- empty -}  { Proof [] }

@@ -21,17 +21,13 @@ onlyL i n = concat $ replicate i [WL] ++ replicate (n-i-1) [PL 1, WL]
 onlyR :: Int -> Int -> [Rule]
 onlyR i n = concat $ replicate i [WR] ++ replicate (n-i-1) [PR 1, WR]
 
-assumption :: Env -> Argument -> [Judgement] -> IO [Judgement]
+assumption :: Env -> Argument -> [Judgement] -> [Command]
 assumption env ArgEmpty (js@(Judgement assms props:_)) = case findIndex (`elem` toList assms) props of
   Nothing -> throwM $ CannotSolve js
   Just i ->
     let Just j = elemIndex (toList props !! i) (toList assms)
-    in return $ either (\_ -> throwM $ FailedToApply) id $ judge env (onlyR i (length props) ++ onlyL j (length assms) ++ [I]) js
+    in return $ Apply $ onlyR i (length props) ++ onlyL j (length assms) ++ [I]
 assumption env arg _ = throwM $ WrongArgument arg
-
-defer :: Env -> Argument -> [Judgement] -> IO [Judgement]
-defer env ArgEmpty (j:js) = return $ js ++ [j]
-defer env arg _ = throwM $ WrongArgument arg
 
 {-| implyR
 
@@ -51,16 +47,15 @@ assumption
 apply (PR 1, WR)
   assms |- a, props
 -}
-implyR :: Env -> Argument -> [Judgement] -> IO [Judgement]
-implyR env (ArgIdents [(i,ps)]) js = implyR env ArgEmpty =<< execStateT (comrunner env [Use i ps]) js
-implyR env ArgEmpty js = execStateT (comrunner env coms) js
-  where
-    coms =
-      [ Apply [ImpL]
-      , NewCommand "defer" ArgEmpty
-      , NewCommand "assumption" ArgEmpty
-      , Apply [PR 1, WR]
-      ]
+implyR :: Env -> Argument -> [Judgement] -> [Command]
+implyR env (ArgIdents [(i,ps)]) js = Use i ps : implyR env ArgEmpty js
+implyR env ArgEmpty _ = coms where
+  coms =
+    [ Apply [ImpL]
+    , NewCommand "defer" ArgEmpty
+    , NewCommand "assumption" ArgEmpty
+    , Apply [PR 1, WR]
+    ]
 implyR env arg _ = throwM $ WrongArgument arg
 
 {-| implyL
@@ -78,15 +73,14 @@ assumption
 apply (PL 1, WL)
   assms, b |- props
 -}
-implyL :: Env -> Argument -> [Judgement] -> IO [Judgement]
-implyL env ArgEmpty js = execStateT (comrunner env coms) js
-  where
-    coms =
-      [ Apply [ImpL]
-      , NewCommand "assumption" ArgEmpty
-      , Apply [PL 1, WL]
-      ]
-implyL env (ArgIdents [(i,ps)]) js = implyL env ArgEmpty =<< execStateT (comrunner env [Use i ps]) js
+implyL :: Env -> Argument -> [Judgement] -> [Command]
+implyL env (ArgIdents [(i,ps)]) js = Use i ps : implyL env ArgEmpty js
+implyL env ArgEmpty js = coms where
+  coms =
+    [ Apply [ImpL]
+    , NewCommand "assumption" ArgEmpty
+    , Apply [PL 1, WL]
+    ]
 implyL env arg _ = throwM $ WrongArgument arg
 
 {-| genR
@@ -107,16 +101,15 @@ assumption
 apply (PR 1, WR)
   assms, |- Forall a. P(a), props
 -}
-genR :: Env -> Argument -> [Judgement] -> IO [Judgement]
-genR env (ArgIdents [(i,[])]) (js@(Judgement _ (p:_):_)) = execStateT (comrunner env coms) js
-  where
-    coms =
-      [ Apply [Cut $ Forall i p]
-      , NewCommand "defer" ArgEmpty
-      , Apply [ForallL (Var i)]
-      , NewCommand "assumption" ArgEmpty
-      , Apply [PR 1, WR]
-      ]
+genR :: Env -> Argument -> [Judgement] -> [Command]
+genR env (ArgIdents [(i,[])]) (js@(Judgement _ (p:_):_)) = coms where
+  coms =
+    [ Apply [Cut $ Forall i p]
+    , NewCommand "defer" ArgEmpty
+    , Apply [ForallL (Var i)]
+    , NewCommand "assumption" ArgEmpty
+    , Apply [PR 1, WR]
+    ]
 genR env arg _ = throwM $ WrongArgument arg
 
 {-| genL
@@ -134,20 +127,18 @@ assumption
 apply (PL 1, WR)
   assms, Forall a. P(a) |- props
 -}
-genL :: Env -> Argument -> [Judgement] -> IO [Judgement]
-genL env (ArgIdents [(i,[])]) (js@(Judgement (p:ps) _:_)) = execStateT (comrunner env coms) js
-  where
-    coms =
-      [ Apply [Cut $ Forall i p]
-      , Apply [ForallR i]
-      , NewCommand "assumption" ArgEmpty
-      , Apply [PL (length ps), WL]
-      ]
+genL :: Env -> Argument -> [Judgement] -> [Command]
+genL env (ArgIdents [(i,[])]) (js@(Judgement (p:ps) _:_)) = 
+  [ Apply [Cut $ Forall i p]
+  , Apply [ForallR i]
+  , NewCommand "assumption" ArgEmpty
+  , Apply [PL (length ps), WL]
+  ]
 genL env arg _ = throwM $ WrongArgument arg
 
+export_command :: [(String, Env -> Argument -> [Judgement] -> [Command])]
 export_command =
   [ ("assumption", assumption)
-  , ("defer", defer)
   , ("implyR", implyR)
   , ("implyL", implyL)
   , ("genR", genR)
@@ -156,16 +147,14 @@ export_command =
 
 ---------------------------------------------
 
-definition :: [Argument] -> Env -> IO Env
-definition [ArgTyped i typ, ArgPreds [PredFml body]] = execStateT (declrunner decls) where
-  decls =
-    [ ConstD i typ
-    , AxiomD (i ++ "_def") body
-    ]
-definition arg = \_ -> throwM $ WrongArguments arg
+definition :: [Argument] -> [Decl]
+definition [ArgTyped i typ, ArgPreds [PredFml body]] =
+  [ ConstD i typ
+  , AxiomD (i ++ "_def") body
+  ]
+definition arg = throwM $ WrongArguments arg
 
 export_decl =
   [ ("definition", definition)
   ]
-
 

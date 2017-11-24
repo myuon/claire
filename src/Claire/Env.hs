@@ -9,8 +9,8 @@ data Env
   { thms :: M.Map ThmIndex Formula
   , types :: M.Map Ident Type
   , proof :: [(Command, String)]
-  , newcommands :: M.Map Ident (Env -> Argument -> [Judgement] -> IO [Judgement])
-  , newdecls :: M.Map Ident ([Argument] -> Env -> IO Env)
+  , newcommands :: M.Map Ident (Env -> Argument -> [Judgement] -> [Command])
+  , newdecls :: M.Map Ident ([Argument] -> [Decl])
   }
 
 instance Show Env where

@@ -35,7 +35,7 @@ clairepl env = go env toplevelM where
   go env k = do
     (result,env') <- flip runStateT env $ resume k
 --    putStrLn $ "env: " ++ show env'
-  
+
     case result of
       Right () -> go env' k
       Left (DeclAwait k) -> do

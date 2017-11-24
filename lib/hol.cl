@@ -6,26 +6,39 @@ constant eqt: 'a => 'a => bool
 
 # connectives & quantifiers
 definition {
-  n[ true: bool ]
-  p[ eq(true, eqt(x => x, x => x)) ]
+  n[ true: bool ];
+  p[ eq(true, eqt(x => x, x => x)) ];
 }
-constant true: bool
-axiom true_def: eq(true, eqt(x => x, x => x))
 
-constant all: ('a => bool) => bool
-axiom all_def: eq(all(P),eqt(P,x => true))
+definition {
+  n[ all: ('a => bool) => bool ];
+  p[ eq(all(P), eqt(P,x => true)) ];
+}
 
-constant ex: ('a => bool) => bool
-axiom ex_def: eq(ex(P),all(Q => imp(all(x => imp(P(x),Q)),Q)))
+definition {
+  n[ ex: ('a => bool) => bool ];
+  p[ eq(ex(P), all(Q => imp(all(x => imp(P(x),Q)),Q))) ];
+}
 
-constant false: bool
-axiom false_def: eq(false, all(P => P))
+definition {
+  n[ false: bool ];
+  p[ eq(false, all(P => P)) ];
+}
 
-constant not: bool => bool
-axiom not_def: eq(not(P), imp(P,false))
+definition {
+  n[ not: bool => bool ];
+  p[ eq(not(P), imp(P,false)) ];
+}
 
-constant and: bool => bool => bool
-axiom and_def: eq(and(P,Q), imp(all(R => imp(P,imp(Q,R))),R))
+definition {
+  n[ and: bool => bool => bool ];
+  p[ eq(and(P,Q), all(R => imp(imp(P,imp(Q,R)),R))) ];
+}
+
+definition {
+  n[ or: bool => bool => bool ];
+  p[ eq(or(P,Q), all(R => imp(imp(P,R),imp(imp(Q,R),R)))) ];
+}
 
 theorem T_true: T(p) ==> eq(p,true)
 proof

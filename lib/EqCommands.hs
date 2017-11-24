@@ -26,17 +26,15 @@ rewrite env (ArgIdents [(i,ps)]) (js@(Judgement assms props:_)) = execStateT (co
 rewrite env arg _ = throwM $ WrongArgument arg
 -}
 
-refl :: Env -> Argument -> [Judgement] -> IO [Judgement]
-refl env (ArgTerms [t]) js = execStateT (comrunner env coms) js
-  where
-    coms =
-      [ Apply [Cut (pFormula "Forall r. eq(r,r)")]
-      , Use "refl" [("eq", PredFun ["x"] $ PredFml $ pFormula "eq(x,x)")]
-      , Apply [ForallR "r"]
-      , NewCommand "assumption" ArgEmpty
-      , Apply [ForallL t]
-      , NewCommand "assumption" ArgEmpty
-      ]
+refl :: Env -> Argument -> [Judgement] -> [Command]
+refl env (ArgTerms [t]) _ = 
+  [ Apply [Cut (pFormula "Forall r. eq(r,r)")]
+  , Use "refl" [("eq", PredFun ["x"] $ PredFml $ pFormula "eq(x,x)")]
+  , Apply [ForallR "r"]
+  , NewCommand "assumption" ArgEmpty
+  , Apply [ForallL t]
+  , NewCommand "assumption" ArgEmpty
+  ]
 refl env arg _ = throwM $ WrongArgument arg
 
 export_command =

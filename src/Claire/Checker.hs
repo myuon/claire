@@ -121,9 +121,10 @@ commandM env = do
           case substPred ('?':idt) pred assm of
             Right r -> lift $ put $ Judgement (r:assms) props : js'
             Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
+    NewCommand "defer" ArgEmpty -> lift $ modify $ \(j:js) -> js ++ [j]
     NewCommand com args | M.member com (newcommands env) -> do
       js <- lift get
-      r <- liftIO $ (Right <$> (newcommands env M.! com) env args js) `catch` \(e :: SomeException) -> throwM e
+      r <- liftIO $ try $ execStateT (comrunner env ((newcommands env M.! com) env args js)) js
       case r of
         Right js' -> lift $ put js'
         Left err -> suspend $ CommandError com err (return ())
@@ -158,7 +159,6 @@ instance Show (DeclSuspender y) where
 declrunner :: (Monad m, MonadIO m) => [Decl] -> StateT Env m ()
 declrunner = go toplevelM where
   go cr ds = do
-    liftIO $ print ds
     r <- resume cr
     case r of
       Left (DeclAwait k) -> case ds of
@@ -199,17 +199,17 @@ toplevelM = forever $ do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]
         setTopLevelModules [takeBaseName file]
-        ds <- interpret "export_decl" (as :: [(String, [Argument] -> Env -> IO Env)])
-        cs <- interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
+        ds <- interpret "export_decl" (as :: [(String, [Argument] -> [Decl])])
+        cs <- interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> [Command])])
         return $ (ds,cs)
       case r of
         Left err -> suspend $ DeclError "HsFile" (toException $ HsFileLoadError err) (return ())
         Right (ds,cs) -> lift $ modify $ \env -> env
-          { newcommands = M.union (M.fromList cs) (newcommands env)
-          , newdecls = M.union (M.fromList ds) (newdecls env)
+          { newdecls = M.union (M.fromList ds) (newdecls env)
+          , newcommands = M.union (M.fromList cs) (newcommands env)
           }
     NewDecl dec args | M.member dec (newdecls env) -> do
-      r <- liftIO $ try $ (newdecls env M.! dec) args env
+      r <- liftIO $ try $ execStateT (declrunner ((newdecls env M.! dec) args)) env
       case r of
         Right env' -> lift $ put env'
         Left err -> suspend $ DeclError dec err (return ())
