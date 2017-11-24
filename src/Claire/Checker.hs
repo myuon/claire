@@ -132,34 +132,49 @@ commandM env = do
   js <- lift get
   unless (null js) $ commandM env
 
-data DeclSuspender m y
+data DeclSuspender y
   = DeclAwait (Decl -> y)
   | ProofNotFinished [Judgement] (Command -> y)
-  | IllegalPredicateDeclaration Formula y
-  | IllegalTermDeclaration Term y
-  | HsFileLoadError InterpreterError y
-  | TypeError Formula SomeException y
-  | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
+  | RunCommandError Ident SomeException y
+  | DeclError Ident SomeException y
   deriving (Functor)
 
-instance Show (DeclSuspender m y) where
+data DeclError
+  = IllegalPredicateDeclaration Formula
+  | IllegalTermDeclaration Term
+  | HsFileLoadError InterpreterError
+  | TypeError Formula SomeException
+--  | ComError (forall m. ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ()))
+  deriving (Show)
+
+instance Exception DeclError
+
+instance Show (DeclSuspender y) where
   show (DeclAwait _) = "DeclAwait"
   show (ProofNotFinished js _) = "ProofNotFinished: " ++ show js
-  show (IllegalPredicateDeclaration fml _) = "IllegalPredicateDeclaration: " ++ show fml
-  show (IllegalTermDeclaration t _) = "IllegalTermDeclaration: " ++ show t
-  show (HsFileLoadError err _) = "HsFileLoadError: " ++ show err
-  show (ComError e _) = "ComError: " ++ show e
-  show (TypeError fml err _) = "TypeError(" ++ show fml ++ "): " ++ show err
+  show (RunCommandError idt err _) = "RunCommandError(" ++ idt ++ "): " ++ show err
+  show (DeclError i err _) = "DeclError(" ++ i ++ "): " ++ show err
 
-toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
+declrunner :: (Monad m, MonadIO m) => [Decl] -> StateT Env m ()
+declrunner = go toplevelM where
+  go cr ds = do
+    r <- resume cr
+    case r of
+      Left (DeclAwait k) -> case ds of
+                             [] -> return ()
+                             (c:cs') -> go (k c) cs'
+      Left err -> liftIO $ throwM $ (error $ "declrunner: " ++ show err :: ErrorCall)
+      Right () -> return ()
+
+toplevelM :: (Monad m, MonadIO m) => Coroutine DeclSuspender (StateT Env m) ()
 toplevelM = forever $ do
   let typecheck fml u k = do {
     env <- lift get;
     utyp <- liftIO $ try $ infer env fml;
     case utyp of
-      Left err -> suspend $ TypeError fml err (return ())
+      Left err -> suspend $ DeclError "typecheck" (toException $ TypeError fml err) (return ())
       Right typ | u == typ -> k
-      Right typ -> suspend $ TypeError fml (toException $ UnificationFailed u typ) (return ())
+      Right typ -> suspend $ DeclError "typecheck" (toException $ TypeError fml (toException $ UnificationFailed u typ)) (return ())
   }
  
   decl <- suspend (DeclAwait return)
@@ -184,11 +199,11 @@ toplevelM = forever $ do
         setTopLevelModules [takeBaseName file]
         interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
       case r of
-        Left err -> suspend $ HsFileLoadError err (return ())
+        Left err -> suspend $ DeclError "HsFile" (toException $ HsFileLoadError err) (return ())
         Right mp -> lift $ modify $ \env -> env { newcommands = M.union (M.fromList mp) (newcommands env) }
 
   where
-    runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+    runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine DeclSuspender (StateT Env m) ()
     runThmD idx fml coms = do
       lift $ modify $ \env -> env { proof = [] }
       env <- lift get
@@ -196,7 +211,7 @@ toplevelM = forever $ do
       lift $ modify $ insertThm idx fml
 
       where
-        go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+        go :: (Monad m) => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine DeclSuspender (StateT Env m) ()
         go machine js coms = do
           env <- lift get
           (result,js') <- lift $ lift $ runStateT (resume machine) js
@@ -210,11 +225,14 @@ toplevelM = forever $ do
                   go (suspend $ ComAwait cont) js' [com']
                 (c:cs) -> do
                   go (cont c) js' cs
-            Left (z@(CommandError _ _ cont)) -> suspend (ComError z (return ())) >> go cont js coms
+            Left (z@(CommandError idt err cont)) -> do
+              suspend $ RunCommandError idt err (return ())
+              go cont js coms
+--              suspend (DeclError "commanderror" (toException $ ComError z) (return ())) >> go cont js coms
 
 claire :: Env -> [Decl] -> IO Env
 claire = go toplevelM where
-  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
+  go :: Coroutine DeclSuspender (StateT Env IO) () -> Env -> [Decl] -> IO Env
   go machine env decls = do
     (result,env') <- flip runStateT env (resume machine)
     case result of

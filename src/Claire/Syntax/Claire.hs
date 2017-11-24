@@ -32,6 +32,7 @@ data Decl
   | PrintProof
   | ConstD Ident Type
   | HsFile String
+  | NewDecl Ident [Argument]
   deriving Show
 
 data Proof

@@ -153,3 +153,12 @@ export_command =
   , ("genL", genL)
   ]
 
+---------------------------------------------
+
+--definition :: [Argument] -> StateT Env IO ()
+--definition = _
+
+--export_decl =
+--  [ ("definition", definition)
+--  ]
+
