@@ -5,7 +5,6 @@ module Claire.Checker where
 
 import Control.Monad.State.Strict
 import Control.Monad.Catch
-import Control.Monad.Except
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
 import Control.Exception.Base (ErrorCall)
@@ -82,7 +81,7 @@ comrunner env = go (commandM env) where
       Left (ComAwait k) -> case cs of
                              [] -> return ()
                              (c:cs') -> go (k c) cs'
-      Left err -> liftIO $ throwM $ (error $ show err :: ErrorCall)
+      Left err -> liftIO $ throwM $ (error $ "comrunner: " ++ show err ++ "\n" ++ show env :: ErrorCall)
       Right () -> return ()
 
 commandM :: (Monad m, MonadIO m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
@@ -139,7 +138,7 @@ data DeclSuspender m y
   | IllegalPredicateDeclaration Formula y
   | IllegalTermDeclaration Term y
   | HsFileLoadError InterpreterError y
-  | TypeError SomeException y
+  | TypeError Formula SomeException y
   | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
   deriving (Functor)
 
@@ -150,17 +149,17 @@ instance Show (DeclSuspender m y) where
   show (IllegalTermDeclaration t _) = "IllegalTermDeclaration: " ++ show t
   show (HsFileLoadError err _) = "HsFileLoadError: " ++ show err
   show (ComError e _) = "ComError: " ++ show e
-  show (TypeError err _) = show err
+  show (TypeError fml err _) = "TypeError(" ++ show fml ++ "): " ++ show err
 
 toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
 toplevelM = forever $ do
   let typecheck fml u k = do {
     env <- lift get;
-    utyp <- liftIO $ runExceptT (infer env fml);
+    utyp <- liftIO $ try $ infer env fml;
     case utyp of
-      Left err -> suspend $ TypeError err (return ())
+      Left err -> suspend $ TypeError fml err (return ())
       Right typ | u == typ -> k
-      Right typ -> suspend $ TypeError (toException $ UnificationFailed u typ) (return ())
+      Right typ -> suspend $ TypeError fml (toException $ UnificationFailed u typ) (return ())
   }
  
   decl <- suspend (DeclAwait return)

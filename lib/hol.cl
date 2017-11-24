@@ -7,7 +7,7 @@ constant eqt: 'a => 'a => bool
 # connectives & quantifiers
 constant true: bool
 constant false: bool
-axiom true_def: eq(true, eqt(r,r))
+axiom true_def: eq(true, eqt(x => x, x => x))
 axiom false_def: eq(false, p)
 
 constant not: bool => bool
@@ -77,4 +77,3 @@ axiom not_def: eq(not(P),imp(P,false))
 axiom abs: (T(not(P)) ==> T(false)) ==> T(P)
 
 theorem not_true: eq(not(true),false)
-

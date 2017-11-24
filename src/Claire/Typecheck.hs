@@ -94,9 +94,10 @@ findUnifsT env = go
     go (Abs xs t) typ = do
       tyt <- VarT . hashUnique <$> liftIO newUnique
       tyxs <- replicateM (length xs) (VarT . hashUnique <$> liftIO newUnique)
-      zipWithM (\x xt -> modify $ M.insert x xt) xs tyxs
+      zipWithM_ (\x xt -> modify $ M.insert x xt) xs tyxs
       qs <- go t tyt
-      return $ S.insert (foldr ArrT typ tyxs,tyt) qs
+      mapM_ (\x -> modify $ M.delete x) xs
+      return $ S.insert (foldr ArrT tyt tyxs,typ) qs
     go (App t ts) typ = do
       tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
       q <- go t (foldr ArrT typ tyts)
