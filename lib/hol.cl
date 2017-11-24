@@ -1,55 +1,23 @@
-Hs_file "lib/Commands.hs"
 import "lib/preliminaries.cl"
 
-# trueprop
-constant T: bool => prop
+# imply, eq
+constant imp: bool => bool => bool
+constant eqt: 'a => 'a => bool
 
-# equivalence relation
-constant eq: 'a => 'a => prop
+# connectives & quantifiers
+constant true: bool
+constant false: bool
+axiom true_def: eq(true, eqt(r,r))
+axiom false_def: eq(false, p)
 
-axiom refl: eq(r,r)
-axiom subst: eq(a,b) ==> P(a) ==> P(b)
+constant not: bool => bool
+axiom not_def: eq(not(P),imp(P,false))
 
-theorem sym: eq(r,s) ==> eq(s,r)
-proof
-  apply ImpR
-  apply Cut [Forall a. Forall b. eq(a,b) ==> eq(a,a) ==> eq(b,a)]
-  use subst
-  apply (ForallR a, ForallR b)
-  inst P [x => eq(x,a)]
-  assumption
-  apply (ForallL [r], ForallL [s])
-  apply ImpL
-  assumption
-  apply ImpL
-  use refl
-  assumption
-  assumption
-qed
+constant all: ('a => bool) => bool
+axiom all_def: eq(all(P),eqt(P(x),true))
 
-theorem trans: eq(r,s) ==> eq(s,t) ==> eq(r,t)
-proof
-  apply (ImpR, ImpR)
-  apply Cut [Forall a. Forall b. eq(a,b) ==> eq(r,a) ==> eq(r,b)]
-  use subst
-  inst P [x => eq(r,x)]
-  apply (ForallR a, ForallR b)
-  assumption
-  apply (ForallL [s], ForallL [t])
-  apply ImpL
-  assumption
-  apply ImpL
-  assumption
-  assumption
-qed
-
-Hs_file "lib/EqCommands.hs"
-
-constant T : bool => prop
-
-# true, false
-constant true : bool
-constant false : bool
+constant ex: ('a => bool) => bool
+axiom ex_def: eq(all(P),not(ex(P)))
 
 axiom bool_induction: P(true) ==> P(false) ==> P(b)
 
