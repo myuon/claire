@@ -199,8 +199,11 @@ Terms :: { [Term] }
   | Term ',' Terms  { $1 : $3 }
 
 Term :: { Term }
-  : ident  { Var $1 }
-  | ident '(' Terms ')'  { Func $1 $3 }
+  : Term '(' Terms ')'  	{ App $1 $3 }
+  | ident '=>' Term  		{ Abs [$1] $3 }
+  | '(' Idents ')' '=>' Term  	{ Abs $2 $5 }
+  | '(' Term ')'    		{ $2 }
+  | ident			{ Var $1 }
 
 Type :: { Type }
   : prop			{ Prop }
