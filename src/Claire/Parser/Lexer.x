@@ -29,6 +29,7 @@ tokens :-
   "p["      { \s -> TokenPLBracket }
   "t["      { \s -> TokenTLBracket }
   "i["      { \s -> TokenILBracket }
+  "n["      { \s -> TokenNLBracket }
   "]"       { \s -> TokenRBracket }
   "~"       { \s -> TokenTilda }
   [\n]      { \s -> TokenNewline }
@@ -98,6 +99,7 @@ data Token
   | TokenPLBracket
   | TokenTLBracket
   | TokenILBracket
+  | TokenNLBracket
   | TokenRBracket
   | TokenTilda
   | TokenNewline

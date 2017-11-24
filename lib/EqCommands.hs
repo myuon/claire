@@ -43,3 +43,5 @@ export_command =
   [ ("refl", refl)
   ]
 
+export_decl = []
+

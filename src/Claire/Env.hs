@@ -10,6 +10,7 @@ data Env
   , types :: M.Map Ident Type
   , proof :: [(Command, String)]
   , newcommands :: M.Map Ident (Env -> Argument -> [Judgement] -> IO [Judgement])
+  , newdecls :: M.Map Ident ([Argument] -> Env -> IO Env)
   }
 
 instance Show Env where
@@ -19,13 +20,14 @@ instance Show Env where
     , "types = " ++ show (types env)
     , "proof = " ++ show (proof env)
     , "newcommands: " ++ show (M.keys $ newcommands env)
+    , "newdecls: " ++ show (M.keys $ newdecls env)
     , "}" ]
 
 insertThm :: ThmIndex -> Formula -> Env -> Env
 insertThm idx fml env = env { thms = M.insert idx (metagen env fml) (thms env) }
 
 defEnv :: Env
-defEnv = Env M.empty M.empty [] M.empty
+defEnv = Env M.empty M.empty [] M.empty M.empty
 
 print_proof :: Env -> String
 print_proof env = unlines $

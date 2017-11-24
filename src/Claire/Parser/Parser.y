@@ -33,6 +33,7 @@ import Claire.Parser.Lexer
   'p['      { TokenPLBracket }
   't['      { TokenTLBracket }
   'i['      { TokenILBracket }
+  'n['      { TokenNLBracket }
   '~'       { TokenTilda }
   ':'       { TokenColon }
   ';'       { TokenSemicolon }
@@ -103,6 +104,11 @@ Decl :: { Decl }
   | print_proof       	  	     { PrintProof }
   | constant ident ':' Type  	     { ConstD $2 $4 }
   | Hs_file strlit  		     { HsFile $2 }
+  | ident '{' Arguments '}'	     { NewDecl $1 $3 }
+
+Arguments :: { [Argument] }
+  : {- empty -}			{ [] }
+  | Argument Arguments		{ $1 : $2 }
 
 Proof :: { Proof }
   : {- empty -}  { Proof [] }
@@ -118,11 +124,12 @@ Command :: { Command }
   | noapply Rule    			{ NoApply $2 }
   | use ident PairsExp			{ Use $2 $3 }
   | inst ident '[' Predicate ']'	{ Inst $2 $4 }
-  | ident ComArgs  	     		{ NewCommand $1 $2 }
+  | ident Argument  	     		{ NewCommand $1 $2 }
 
-ComArgs :: { Argument }
+Argument :: { Argument }
   : {- empty -}				{ ArgEmpty }
   | 'p[' Predicates ']'  		{ ArgPreds $2 }
+  | 'n[' ident ':' Type ']'  	 	{ ArgTyped $2 $4 }
   | 't[' Terms ']'  	 		{ ArgTerms $2 }
   | 'i[' IdentPairs ']'  		{ ArgIdents $2 }
 

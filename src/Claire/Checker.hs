@@ -144,7 +144,7 @@ data DeclError
   | IllegalTermDeclaration Term
   | HsFileLoadError InterpreterError
   | TypeError Formula SomeException
---  | ComError (forall m. ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ()))
+  | NoSuchDecl
   deriving (Show)
 
 instance Exception DeclError
@@ -158,6 +158,7 @@ instance Show (DeclSuspender y) where
 declrunner :: (Monad m, MonadIO m) => [Decl] -> StateT Env m ()
 declrunner = go toplevelM where
   go cr ds = do
+    liftIO $ print ds
     r <- resume cr
     case r of
       Left (DeclAwait k) -> case ds of
@@ -178,6 +179,7 @@ toplevelM = forever $ do
   }
  
   decl <- suspend (DeclAwait return)
+  env <- lift get
   case decl of
     AxiomD idx fml -> typecheck fml Prop $ do
       lift $ modify $ insertThm idx fml
@@ -197,11 +199,22 @@ toplevelM = forever $ do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]
         setTopLevelModules [takeBaseName file]
-        interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
+        ds <- interpret "export_decl" (as :: [(String, [Argument] -> Env -> IO Env)])
+        cs <- interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> IO [Judgement])])
+        return $ (ds,cs)
       case r of
         Left err -> suspend $ DeclError "HsFile" (toException $ HsFileLoadError err) (return ())
-        Right mp -> lift $ modify $ \env -> env { newcommands = M.union (M.fromList mp) (newcommands env) }
-
+        Right (ds,cs) -> lift $ modify $ \env -> env
+          { newcommands = M.union (M.fromList cs) (newcommands env)
+          , newdecls = M.union (M.fromList ds) (newdecls env)
+          }
+    NewDecl dec args | M.member dec (newdecls env) -> do
+      r <- liftIO $ try $ (newdecls env M.! dec) args env
+      case r of
+        Right env' -> lift $ put env'
+        Left err -> suspend $ DeclError dec err (return ())
+    NewDecl dec args -> suspend $ DeclError dec (toException NoSuchDecl) (return ())
+      
   where
     runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine DeclSuspender (StateT Env m) ()
     runThmD idx fml coms = do

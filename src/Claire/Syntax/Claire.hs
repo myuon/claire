@@ -22,6 +22,7 @@ data Argument
   = ArgEmpty
   | ArgPreds [Predicate]
   | ArgTerms [Term]
+  | ArgTyped Ident Type
   | ArgIdents [(Ident,Pairs)]
   deriving (Show)
 

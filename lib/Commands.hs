@@ -10,6 +10,7 @@ data BasicComError
   = CannotSolve [Judgement]
   | FailedToApply
   | WrongArgument Argument
+  | WrongArguments [Argument]
   deriving Show
 
 instance Exception BasicComError
@@ -155,10 +156,16 @@ export_command =
 
 ---------------------------------------------
 
---definition :: [Argument] -> StateT Env IO ()
---definition = _
+definition :: [Argument] -> Env -> IO Env
+definition [ArgTyped i typ, ArgPreds [PredFml body]] = execStateT (declrunner decls) where
+  decls =
+    [ ConstD i typ
+    , AxiomD (i ++ "_def") body
+    ]
+definition arg = \_ -> throwM $ WrongArguments arg
 
---export_decl =
---  [ ("definition", definition)
---  ]
+export_decl =
+  [ ("definition", definition)
+  ]
+
 
