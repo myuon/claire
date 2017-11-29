@@ -136,6 +136,36 @@ genL env (ArgIdents [(i,[])]) (js@(Judgement (p:ps) _:_)) =
   ]
 genL env arg _ = throwM $ WrongArgument arg
 
+{-| absR
+
+goal: assms, a |- b, props
+
+apply Cut [a ==> b]
+  assms, a |- a ==> b, b, props
+  assms, a, a ==> b |- b, props
+defer
+  assms, a, a ==> b |- b, props
+  assms, a |- a ==> b, b, props
+apply ImpL
+  assms, a |- a, b, props
+  assms, a, b |- b, props
+  assms, a |- a ==> b, b, props
+assumption [2]
+  assms, a |- a ==> b, b, props
+apply (PR 1, WR, WL)
+  assms |- a ==> b, props
+-}
+
+absL :: Env -> Argument -> [Judgement] -> [Command]
+absL env ArgEmpty (js@(Judgement (a:_) (b:_):_)) =
+  [ Apply [Cut $ a :==>: b]
+  , NewCommand "defer" ArgEmpty
+  , Apply [ImpL]
+  , NewCommand "assumption" ArgEmpty
+  , NewCommand "assumption" ArgEmpty
+  , Apply [PR 1, WR, WL]
+  ]
+
 export_command :: [(String, Env -> Argument -> [Judgement] -> [Command])]
 export_command =
   [ ("assumption", assumption)
@@ -143,6 +173,7 @@ export_command =
   , ("implyL", implyL)
   , ("genR", genR)
   , ("genL", genL)
+  , ("absL", absL)
   ]
 
 ---------------------------------------------
