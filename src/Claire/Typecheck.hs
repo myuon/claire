@@ -91,16 +91,18 @@ findUnifsT env = go
         else do
           modify $ M.insert v typ
           return S.empty
-    go (Func v ts) typ | M.member v (types env) = do
-      vtyp <- utype $ types env M.! v
+    go (Abs xs t) typ = do
+      tyt <- VarT . hashUnique <$> liftIO newUnique
+      tyxs <- replicateM (length xs) (VarT . hashUnique <$> liftIO newUnique)
+      zipWithM_ (\x xt -> modify $ M.insert x xt) xs tyxs
+      qs <- go t tyt
+      mapM_ (\x -> modify $ M.delete x) xs
+      return $ S.insert (foldr ArrT tyt tyxs,typ) qs
+    go (App t ts) typ = do
       tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
+      q <- go t (foldr ArrT typ tyts)
       qs <- zipWithM go ts tyts
-      return $ S.insert (foldr ArrT typ tyts,vtyp) $ S.unions qs
-    go (Func v ts) typ = do
-      tyts <- replicateM (length ts) (VarT . hashUnique <$> liftIO newUnique)
-      qs <- zipWithM go ts tyts
-      modify $ M.insert v (foldr ArrT typ tyts)
-      return $ S.unions qs
+      return $ S.union q $ S.unions qs
 
 inferST :: (MonadIO m, MonadThrow m) => Env -> Formula -> StateT (M.Map Ident UType) m UType
 inferST env fml = do

@@ -9,7 +9,11 @@ import qualified Data.Set as S
 
 type Ident = String
 
-data Term = Var Ident | Func Ident [Term] deriving (Eq, Show)
+data Term
+  = Var Ident
+  | Abs [Ident] Term
+  | App Term [Term]
+  deriving (Eq, Show)
 
 data TypeForm a
   = VarT a
@@ -55,26 +59,27 @@ substType x t' = go where
   go (ArrT y1 y2) = ArrT (go y1) (go y2)
   go Prop = Prop
 
-fv :: Formula -> S.Set Ident
-fv = go where
-  fvt (Var v) = S.singleton v
-  fvt (Func _ ts) = S.unions $ fmap fvt ts
-  
-  go (Pred p ts) = S.unions $ fmap fvt ts
+{-
+fvp :: Formula -> S.Set Ident
+fvp = go where
+--  go (Pred p ts) = S.unions $ fmap fvt ts
   go Top = S.empty
   go Bottom = S.empty
-  go (f1 :/\: f2) = S.union (fv f1) (fv f2)
-  go (f1 :\/: f2) = S.union (fv f1) (fv f2)
-  go (f1 :==>: f2) = S.union (fv f1) (fv f2)
-  go (Forall v f) = S.delete v $ fv f
-  go (Exist v f) = S.delete v $ fv f
+  go (f1 :/\: f2) = S.union (fvp f1) (fvp f2)
+  go (f1 :\/: f2) = S.union (fvp f1) (fvp f2)
+  go (f1 :==>: f2) = S.union (fvp f1) (fvp f2)
+  go (Forall v f) = S.delete v $ fvp f
+  go (Exist v f) = S.delete v $ fvp f
+-}
 
 substTerm :: Ident -> Term -> Formula -> Formula
 substTerm idt t' = go where
   got (Var i)
     | i == idt = t'
     | otherwise = Var i
-  got (Func f ts) = Func f $ fmap got ts
+  got (Abs ids t) | idt `elem` ids = Abs ids t
+  got (Abs ids t) = Abs ids (got t)
+  got (App tx tys) = App (got tx) (fmap got tys)
   
   go (Pred p ts) = Pred p $ fmap got ts
   go Top = Top
@@ -114,6 +119,6 @@ substPred idt pred = go where
   sbterm t x (PredFun ys fml) = PredFun ys $ sbterm t x fml
   sbterm t x (PredFml fml) = PredFml $ substTerm t x fml
 
-generalize :: Formula -> Formula
-generalize fml = S.foldl (\f i -> Forall i f) fml (fv fml)
+--generalize :: Formula -> Formula
+--generalize fml = S.foldl (\f i -> Forall i f) fml (fv fml)
 

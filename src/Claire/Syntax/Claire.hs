@@ -8,22 +8,32 @@ type ThmIndex = String
 data Laire = Laire [Decl]
   deriving (Show)
 
+type Pairs = [(Ident,Predicate)]
+
 data Command
   = Apply [Rule]
-  | Use ThmIndex
+  | Use ThmIndex Pairs
   | Inst Ident Predicate
   | NoApply Rule
-  | NewCommand Ident
+  | NewCommand Ident Argument
+  deriving (Show)
+
+data Argument
+  = ArgEmpty
+  | ArgPreds [Predicate]
+  | ArgTerms [Term]
+  | ArgTyped Ident Type
+  | ArgIdents [(Ident,Pairs)]
   deriving (Show)
 
 data Decl
   = ThmD ThmIndex Formula Proof
   | AxiomD ThmIndex Formula
   | ImportD String
-  | PredD Formula Type
   | PrintProof
-  | TermD Term Type
+  | ConstD Ident Type
   | HsFile String
+  | NewDecl Ident [Argument]
   deriving Show
 
 data Proof

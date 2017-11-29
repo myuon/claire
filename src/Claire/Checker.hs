@@ -1,14 +1,15 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Claire.Checker where
 
 import Control.Monad.State.Strict
 import Control.Monad.Catch
-import Control.Monad.Except
 import Control.Monad.Coroutine
 import Control.Monad.Coroutine.SuspensionFunctors
-import qualified Data.Sequence as S
+import Control.Exception.Base (ErrorCall)
 import qualified Data.Map as M
+import Data.Foldable
 import Language.Haskell.Interpreter hiding (get, infer)
 import System.FilePath
 
@@ -19,127 +20,166 @@ import Claire.Typecheck
 
 
 newGoal :: Formula -> [Judgement]
-newGoal fml = [Judgement S.empty (S.singleton fml)]
+newGoal fml = [Judgement [] (return fml)]
 
 judge :: Env -> [Rule] -> [Judgement] -> Either (Rule, [Judgement]) [Judgement]
 judge thms rs js = foldl (\m r -> m >>= go r) (Right js) rs where
-  go I (Judgement assms props : js) | S.length assms == 1 && assms == props = Right js
-  go (Cut fml) (Judgement assms props : js) = Right $ Judgement assms (fml S.:<| props) : Judgement (assms S.:|> fml) props : js
-  go AndL1 (Judgement (assms S.:|> (fa :/\: fb)) props : js) = Right $ Judgement (assms S.:|> fa) props : js
-  go AndL2 (Judgement (assms S.:|> (fa :/\: fb)) props : js) = Right $ Judgement (assms S.:|> fb) props : js
-  go AndR (Judgement assms ((fa :/\: fb) S.:<| props) : js) = Right $ Judgement assms (fa S.:<| props) : Judgement assms (fb S.:<| props) : js
-  go OrL (Judgement (assms S.:|> (fa :\/: fb)) props : js) = Right $ Judgement (assms S.:|> fa) props : Judgement (assms S.:|> fb) props : js
-  go OrR1 (Judgement assms ((fa :\/: fb) S.:<| props) : js) = Right $ Judgement assms (fa S.:<| props) : js
-  go OrR2 (Judgement assms ((fa :\/: fb) S.:<| props) : js) = Right $ Judgement assms (fb S.:<| props) : js
-  go ImpL (Judgement (assms S.:|> (fa :==>: fb)) props : js) = Right $ Judgement assms (fa S.:<| props) : Judgement (assms S.:|> fb) props : js
-  go ImpR (Judgement assms ((fa :==>: fb) S.:<| props) : js) = Right $ Judgement (assms S.:|> fa) (fb S.:<| props) : js
-  go BottomL (Judgement (assms S.:|> Bottom) props : js) = Right js
-  go TopR (Judgement assms (Top S.:<| props) : js) = Right js
-  go (ForallL t) (Judgement (assms S.:|> Forall x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x t fml) props : js
-  go (ForallR y) (Judgement assms (Forall x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x (Var y) fml S.:<| props) : js
-  go (ExistL y) (Judgement (assms S.:|> Exist x fml) props : js) = Right $ Judgement (assms S.:|> substTerm x (Var y) fml) props : js
-  go (ExistR t) (Judgement assms (Exist x fml S.:<| props) : js) = Right $ Judgement assms (substTerm x t fml S.:<| props) : js
+  go I (Judgement assms props : js) | length assms == 1 && assms == props = Right js
+  go (Cut fml) (Judgement assms props : js) = Right $ Judgement assms (fml:props) : Judgement (fml:assms) props : js
+  go AndL1 (Judgement ((fa :/\: fb):assms) props : js) = Right $ Judgement (fa:assms) props : js
+  go AndL2 (Judgement ((fa :/\: fb):assms) props : js) = Right $ Judgement (fb:assms) props : js
+  go AndR (Judgement assms ((fa :/\: fb):props) : js) = Right $ Judgement assms (fa:props) : Judgement assms (fb:props) : js
+  go OrL (Judgement ((fa :\/: fb):assms) props : js) = Right $ Judgement (fa:assms) props : Judgement (fb:assms) props : js
+  go OrR1 (Judgement assms ((fa :\/: fb):props) : js) = Right $ Judgement assms (fa:props) : js
+  go OrR2 (Judgement assms ((fa :\/: fb):props) : js) = Right $ Judgement assms (fb:props) : js
+  go ImpL (Judgement ((fa :==>: fb):assms) props : js) = Right $ Judgement assms (fa:props) : Judgement (fb:assms) props : js
+  go ImpR (Judgement assms ((fa :==>: fb):props) : js) = Right $ Judgement (fa:assms) (fb:props) : js
+  go BottomL (Judgement (Bottom:assms) props : js) = Right js
+  go TopR (Judgement assms (Top:props) : js) = Right js
+  go (ForallL t) (Judgement (Forall x fml:assms) props : js) = Right $ Judgement (substTerm x t fml:assms) props : js
+  go (ForallR y) (Judgement assms (Forall x fml:props) : js) = Right $ Judgement assms (substTerm x (Var y) fml:props) : js
+  go (ExistL y) (Judgement (Exist x fml:assms) props : js) = Right $ Judgement (substTerm x (Var y) fml:assms) props : js
+  go (ExistR t) (Judgement assms (Exist x fml:props) : js) = Right $ Judgement assms (substTerm x t fml:props) : js
 
-  go WL (Judgement (assms S.:|> _) props : js) = Right $ Judgement assms props : js
-  go WR (Judgement assms (_ S.:<| props) : js) = Right $ Judgement assms props : js
-  go CL (Judgement (assms S.:|> fml) props : js) = Right $ Judgement (assms S.:|> fml S.:|> fml) props : js
-  go CR (Judgement assms (fml S.:<| props) : js) = Right $ Judgement assms (fml S.:<| fml S.:<| props) : js
-  go (PL k) (Judgement assms props : js) | k < S.length assms = Right $ Judgement (S.deleteAt k assms S.:|> S.index assms k) props : js
-  go (PR k) (Judgement assms props : js) | k < S.length props = Right $ Judgement assms (S.index props k S.:<| S.deleteAt k props) : js
+  go WL (Judgement (_:assms) props : js) = Right $ Judgement assms props : js
+  go WR (Judgement assms (_:props) : js) = Right $ Judgement assms props : js
+  go CL (Judgement (fml:assms) props : js) = Right $ Judgement (fml:fml:assms) props : js
+  go CR (Judgement assms (fml:props) : js) = Right $ Judgement assms (fml:fml:props) : js
+  go (PL k) (Judgement assms props : js) | k < length assms = Right $ Judgement (assms !! k : deleteAt k assms) props : js
+  go (PR k) (Judgement assms props : js) | k < length props = Right $ Judgement assms (props !! k : deleteAt k props) : js
 
   go r js = Left (r,js)
+
+  deleteAt k xs = take k xs ++ drop (k+1) xs
 
 --
 
 data ComSuspender y
   = ComAwait (Command -> y)
-  | CannotApply Rule [Judgement] y
-  | CannotInstantiate SomeException y
-  | CommandError String String y
+  | CommandError Ident SomeException y
   deriving (Functor)
 
 instance Show (ComSuspender y) where
   show (ComAwait _) = "ComAwait"
-  show (CannotApply r js _) = show r ++ " cannot apply to " ++ show js
-  show (CannotInstantiate err _) = show err
-  show (CommandError com err _) = "CommandError(" ++ com ++ "): " ++ err
+  show (CommandError com err _) = com ++ ": " ++ show err
+
+data CommandError
+  = NoSuchTheorem Ident
+  | CannotApply Rule [Judgement]
+  | CannotInstantiate SomeException
+  | NewCommandError Argument SomeException
+  | NoSuchCommand
+  deriving (Show)
+
+instance Exception CommandError
+
+comrunner :: (Monad m, MonadIO m) => Env -> [Command] -> StateT [Judgement] m ()
+comrunner env = go (commandM env) where
+  go cr cs = do
+    r <- resume cr
+    case r of
+      Left (ComAwait k) -> case cs of
+                             [] -> return ()
+                             (c:cs') -> go (k c) cs'
+      Left err -> liftIO $ throwM $ (error $ "comrunner: " ++ show err ++ "\n" ++ show env :: ErrorCall)
+      Right () -> return ()
 
 commandM :: (Monad m, MonadIO m) => Env -> Coroutine ComSuspender (StateT [Judgement] m) ()
 commandM env = do
   com <- suspend $ ComAwait return
+  let insts fml pairs = foldlM (\f (idt,pred) -> substPred ('?':idt) pred f) fml pairs
+  
   case com of
     Apply rs -> do
       js <- lift get
       case judge env rs js of
         Left (r,js') -> do
-          suspend $ CannotApply r js' (return ())
+          suspend $ CommandError "apply" (toException $ CannotApply r js') (return ())
           commandM env
         Right js' -> lift $ put js'
     NoApply r -> do
       js <- lift get
       case judge env [r] js of
         Left (r,js') -> do
-          suspend $ CannotApply r js' (return ())
+          suspend $ CommandError "noapply" (toException $ CannotApply r js') (return ())
           commandM env
         Right js' -> do
           liftIO $ putStrLn $ "= NoApply " ++ show r ++ " result"
           liftIO $ mapM_ print js'
           liftIO $ putStrLn $ "=\n"
-    Use idx | idx `M.member` thms env -> do
+    Use idx pairs | idx `M.member` thms env -> do
       let fml = thms env M.! idx
-      lift $ modify $ \(Judgement assms props : js) -> Judgement (assms S.:|> fml) props : js
-    Use idx -> suspend $ CommandError (show $ Use idx) "No such theorem" (return ())
+      case insts fml pairs of
+        Right r -> lift $ modify $ \(Judgement assms props : js) -> Judgement (r:assms) props : js
+        Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
+    Use idx pairs -> suspend $ CommandError "use" (toException $ NoSuchTheorem idx) (return ())
     Inst idt pred -> do
       js <- lift get
       case js of
-        [] -> suspend $ CannotInstantiate (error "empty judgement") (return ())
-        (Judgement (assms S.:|> assm) props : js') -> do
+        [] -> suspend $ CommandError "inst" (toException (error "empty judgement" :: ErrorCall)) (return ())
+        (Judgement (assm:assms) props : js') -> do
           case substPred ('?':idt) pred assm of
-            Right r -> lift $ put $ Judgement (assms S.:|> r) props : js'
-            Left err -> suspend $ CannotInstantiate err (return ())
-    NewCommand com | M.member com (newcommands env) -> do
+            Right r -> lift $ put $ Judgement (r:assms) props : js'
+            Left err -> suspend $ CommandError "inst" (toException $ CannotInstantiate err) (return ())
+    NewCommand "defer" ArgEmpty -> lift $ modify $ \(j:js) -> js ++ [j]
+    NewCommand com args | M.member com (newcommands env) -> do
       js <- lift get
-      case (newcommands env M.! com) env js of
-        Left err -> suspend $ CommandError com err (return ())
+      r <- liftIO $ try $ execStateT (comrunner env ((newcommands env M.! com) env args js)) js
+      case r of
         Right js' -> lift $ put js'
-    NewCommand com -> suspend $ CommandError com "No such command" (return ())
+        Left err -> suspend $ CommandError com err (return ())
+    NewCommand com args -> suspend $ CommandError com (toException NoSuchCommand) (return ())
 
   js <- lift get
   unless (null js) $ commandM env
 
-data DeclSuspender m y
+data DeclSuspender y
   = DeclAwait (Decl -> y)
   | ProofNotFinished [Judgement] (Command -> y)
-  | IllegalPredicateDeclaration Formula y
-  | IllegalTermDeclaration Term y
-  | HsFileLoadError InterpreterError y
-  | TypeError SomeException y
-  | ComError (ComSuspender (Coroutine ComSuspender (StateT [Judgement] m) ())) y
+  | RunCommandError Ident SomeException y
+  | DeclError Ident SomeException y
   deriving (Functor)
 
-instance Show (DeclSuspender m y) where
+data DeclError
+  = IllegalPredicateDeclaration Formula
+  | IllegalTermDeclaration Term
+  | HsFileLoadError InterpreterError
+  | TypeError Formula SomeException
+  | NoSuchDecl
+  deriving (Show)
+
+instance Exception DeclError
+
+instance Show (DeclSuspender y) where
   show (DeclAwait _) = "DeclAwait"
   show (ProofNotFinished js _) = "ProofNotFinished: " ++ show js
-  show (IllegalPredicateDeclaration fml _) = "IllegalPredicateDeclaration: " ++ show fml
-  show (IllegalTermDeclaration t _) = "IllegalTermDeclaration: " ++ show t
-  show (HsFileLoadError err _) = "HsFileLoadError: " ++ show err
-  show (ComError e _) = "ComError: " ++ show e
-  show (TypeError err _) = show err
+  show (RunCommandError idt err _) = "RunCommandError(" ++ idt ++ "): " ++ show err
+  show (DeclError i err _) = "DeclError(" ++ i ++ "): " ++ show err
 
-toplevelM :: (Monad m, MonadIO m) => Coroutine (DeclSuspender m) (StateT Env m) ()
+declrunner :: (Monad m, MonadIO m) => [Decl] -> StateT Env m ()
+declrunner = go toplevelM where
+  go cr ds = do
+    r <- resume cr
+    case r of
+      Left (DeclAwait k) -> case ds of
+                             [] -> return ()
+                             (c:cs') -> go (k c) cs'
+      Left err -> liftIO $ throwM $ (error $ "declrunner: " ++ show err :: ErrorCall)
+      Right () -> return ()
+
+toplevelM :: (Monad m, MonadIO m) => Coroutine DeclSuspender (StateT Env m) ()
 toplevelM = forever $ do
-  let isVar (Var _) = True
-      isVar _ = False
   let typecheck fml u k = do {
     env <- lift get;
-    utyp <- liftIO $ runExceptT (infer env fml);
+    utyp <- liftIO $ try $ infer env fml;
     case utyp of
-      Left err -> suspend $ TypeError err (return ())
+      Left err -> suspend $ DeclError "typecheck" (toException $ TypeError fml err) (return ())
       Right typ | u == typ -> k
-      Right typ -> suspend $ TypeError (toException $ UnificationFailed u typ) (return ())
+      Right typ -> suspend $ DeclError "typecheck" (toException $ TypeError fml (toException $ UnificationFailed u typ)) (return ())
   }
  
   decl <- suspend (DeclAwait return)
+  env <- lift get
   case decl of
     AxiomD idx fml -> typecheck fml Prop $ do
       lift $ modify $ insertThm idx fml
@@ -150,27 +190,33 @@ toplevelM = forever $ do
       env <- lift get
       env' <- liftIO $ claire env . (\(Laire ds) -> ds) . pLaire =<< readFile path
       lift $ put $ env'
-    PredD fml typ -> do
-      case fml of
-        Pred p ts | all isVar ts -> lift $ modify $ \env -> env { types = M.insert p typ (types env) }
-        z -> suspend $ IllegalPredicateDeclaration z (return ())
+    ConstD p typ -> do
+      lift $ modify $ \env -> env { types = M.insert p typ (types env) }
     PrintProof -> do
       env <- lift get
       liftIO $ putStrLn $ print_proof env
-    TermD trm typ -> case trm of
-      Var v -> lift $ modify $ \env -> env { types = M.insert v typ (types env) }
-      z -> suspend $ IllegalTermDeclaration z (return ())
     HsFile file -> do
       r <- liftIO $ runInterpreter $ do
         loadModules [file]
         setTopLevelModules [takeBaseName file]
-        interpret "export" (as :: [(String, Env -> [Judgement] -> Either String [Judgement])])
+        ds <- interpret "export_decl" (as :: [(String, [Argument] -> [Decl])])
+        cs <- interpret "export_command" (as :: [(String, Env -> Argument -> [Judgement] -> [Command])])
+        return $ (ds,cs)
       case r of
-        Left err -> suspend $ HsFileLoadError err (return ())
-        Right mp -> lift $ modify $ \env -> env { newcommands = M.union (M.fromList mp) (newcommands env) }
-
+        Left err -> suspend $ DeclError "HsFile" (toException $ HsFileLoadError err) (return ())
+        Right (ds,cs) -> lift $ modify $ \env -> env
+          { newdecls = M.union (M.fromList ds) (newdecls env)
+          , newcommands = M.union (M.fromList cs) (newcommands env)
+          }
+    NewDecl dec args | M.member dec (newdecls env) -> do
+      r <- liftIO $ try $ execStateT (declrunner ((newdecls env M.! dec) args)) env
+      case r of
+        Right env' -> lift $ put env'
+        Left err -> suspend $ DeclError dec err (return ())
+    NewDecl dec args -> suspend $ DeclError dec (toException NoSuchDecl) (return ())
+      
   where
-    runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+    runThmD :: (Monad m, MonadIO m) => ThmIndex -> Formula -> [Command] -> Coroutine DeclSuspender (StateT Env m) ()
     runThmD idx fml coms = do
       lift $ modify $ \env -> env { proof = [] }
       env <- lift get
@@ -178,12 +224,11 @@ toplevelM = forever $ do
       lift $ modify $ insertThm idx fml
 
       where
-        go :: Monad m => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine (DeclSuspender m) (StateT Env m) ()
+        go :: (Monad m) => Coroutine ComSuspender (StateT [Judgement] m) () -> [Judgement] -> [Command] -> Coroutine DeclSuspender (StateT Env m) ()
         go machine js coms = do
           env <- lift get
           (result,js') <- lift $ lift $ runStateT (resume machine) js
 
-          let err_handle = \z cont -> suspend (ComError z (return ())) >> go cont js coms
           case result of
             Right () -> return ()
             Left (ComAwait cont) -> do
@@ -193,13 +238,14 @@ toplevelM = forever $ do
                   go (suspend $ ComAwait cont) js' [com']
                 (c:cs) -> do
                   go (cont c) js' cs
-            Left (z@(CannotApply _ _ cont)) -> err_handle z cont
-            Left (z@(CannotInstantiate _ cont)) -> err_handle z cont
-            Left (z@(CommandError _ _ cont)) -> err_handle z cont
+            Left (z@(CommandError idt err cont)) -> do
+              suspend $ RunCommandError idt err (return ())
+              go cont js coms
+--              suspend (DeclError "commanderror" (toException $ ComError z) (return ())) >> go cont js coms
 
 claire :: Env -> [Decl] -> IO Env
 claire = go toplevelM where
-  go :: Coroutine (DeclSuspender IO) (StateT Env IO) () -> Env -> [Decl] -> IO Env
+  go :: Coroutine DeclSuspender (StateT Env IO) () -> Env -> [Decl] -> IO Env
   go machine env decls = do
     (result,env') <- flip runStateT env (resume machine)
     case result of

@@ -26,8 +26,14 @@ import Claire.Parser.Lexer
   ','       { TokenComma }
   ')'       { TokenRParen }
   '('       { TokenLParen }
+  '}'       { TokenRBrace }
+  '{'       { TokenLBrace }
   ']'       { TokenRBracket }
   '['       { TokenLBracket }
+  'p['      { TokenPLBracket }
+  't['      { TokenTLBracket }
+  'i['      { TokenILBracket }
+  'n['      { TokenNLBracket }
   '~'       { TokenTilda }
   ':'       { TokenColon }
   ';'       { TokenSemicolon }
@@ -39,10 +45,9 @@ import Claire.Parser.Lexer
   proof     { TokenProof }
   qed       { TokenQed }
   import    { TokenImport }
-  predicate { TokenPredicate }
   print_proof  { TokenPrintProof }
   Hs_file   { TokenHsFile }
-  term	    { TokenTerm }
+  constant  { TokenConstant }
   apply     { TokenApply }
   noapply   { TokenNoApply }
   use       { TokenUse }
@@ -85,86 +90,104 @@ import Claire.Parser.Lexer
 
 %%
 
-Laire
+Laire :: { Laire }
   : Decls  { Laire $1 }
 
-Decls
+Decls :: { [Decl] }
   : {- empty -}  { [] }
   | Decl Decls  { $1 : $2 }
 
-Decl
+Decl :: { Decl }
   : theorem ident ':' Formula Proof  { ThmD $2 $4 $5 }
   | axiom ident ':' Formula   	     { AxiomD $2 $4 }
   | import strlit   		     { ImportD $2 }
-  | predicate Formula ':' Type       { PredD $2 $4 }
   | print_proof       	  	     { PrintProof }
-  | term Term ':' Type  	     { TermD $2 $4 }
+  | constant ident ':' Type  	     { ConstD $2 $4 }
   | Hs_file strlit  		     { HsFile $2 }
+  | ident '{' Arguments '}'	     { NewDecl $1 $3 }
 
-Proof
+Arguments :: { [Argument] }
+  : {- empty -}			{ [] }
+  | Argument ';' Arguments	{ $1 : $3 }
+
+Proof :: { Proof }
   : {- empty -}  { Proof [] }
   | proof Commands qed  { Proof $2 }
 
-Commands
+Commands :: { [Command] }
   : {- empty -}  { [] }
   | Command Commands  { $1 : $2 }
 
-Command
-  : apply Rule  { Apply [$2] }
-  | apply '(' Rules ')'  { Apply $3 }
-  | noapply Rule  { NoApply $2 }
-  | use ident  { Use $2 }
-  | inst ident '[' Predicate ']'  { Inst $2 $4 }
-  | ident  { NewCommand $1 }
+Command :: { Command }
+  : apply Rule				{ Apply [$2] }
+  | apply '(' Rules ')'			{ Apply $3 }
+  | noapply Rule    			{ NoApply $2 }
+  | use ident PairsExp			{ Use $2 $3 }
+  | inst ident '[' Predicate ']'	{ Inst $2 $4 }
+  | ident Argument  	     		{ NewCommand $1 $2 }
 
-Predicates
-  : {- empty -}  { [] }
-  | Predicate  { [Just $1] }
-  | '_'  { [Nothing] }
-  | Predicate ',' Predicates  { Just $1 : $3 }
-  | '_' ',' Predicates  { Nothing : $3 }
+Argument :: { Argument }
+  : {- empty -}				{ ArgEmpty }
+  | 'p[' Predicates ']'  		{ ArgPreds $2 }
+  | 'n[' ident ':' Type ']'  	 	{ ArgTyped $2 $4 }
+  | 't[' Terms ']'  	 		{ ArgTerms $2 }
+  | 'i[' IdentPairs ']'  		{ ArgIdents $2 }
 
-Predicate
-  : Arguments '=>' Predicate  { PredFun $1 $3 }
+Predicates :: { [Predicate] }
+  : {- empty -}				{ [] }
+  | Predicate				{ [$1] }
+  | Predicate ',' Predicates		{ $1 : $3 }
+
+Predicate :: { Predicate }
+  : ident '=>' Predicate		{ PredFun [$1] $3 }
+  | '(' Idents ')' '=>' Predicate	{ PredFun $2 $5 }
   | Formula  { PredFml $1 }
 
-Arguments
-  : ident  { [$1] }
-  | '(' Idents ')'  { $2 }
+Idents :: { [Ident] }
+  : ident				{ [$1] }
+  | ident ',' Idents			{ $1 : $3 }
 
-Idents
-  : ident  { [$1] }
-  | ident ',' Idents { $1 : $3 }
+IdentPairs :: { [(Ident,Pairs)] }
+  : ident PairsExp			{ [($1,$2)] }
+  | ident PairsExp ',' IdentPairs	{ ($1,$2) : $4 }
 
-Rules
+PairsExp :: { Pairs }
+  : {- empty -}				{ [] }
+  | '{' Pairs '}'			{ $2 }
+
+Pairs :: { Pairs }
+  : ident ':' Predicate			{ [($1,$3)] }
+  | ident ':' Predicate ',' Pairs	{ ($1,$3) : $5 }
+
+Rules :: { [Rule] }
   : Rule  { [$1] }
   | Rule ',' Rules  { $1 : $3 }
 
-Rule
-  : I  { I }
-  | Cut '[' Formula ']'  { Cut $3 }
-  | AndL1  { AndL1 }
-  | AndL2  { AndL2 }
-  | AndR  { AndR }
-  | OrL  { OrL }
-  | OrR1  { OrR1 }
-  | OrR2  { OrR2 }
-  | ImpL  { ImpL }
-  | ImpR  { ImpR }
-  | BottomL  { BottomL }
-  | TopR  { TopR }
-  | ForallL '[' Term ']'  { ForallL $3 }
-  | ForallR ident  { ForallR $2 }
-  | ExistL ident  { ExistL $2 }
-  | ExistR '[' Term ']'  { ExistR $3 }
-  | WL  { WL }
-  | WR  { WR }
-  | CL  { CL }
-  | CR  { CR }
-  | PL number  { PL $2 }
-  | PR number  { PR $2 }
+Rule :: { Rule }
+  : I				{ I }
+  | Cut '[' Formula ']'  	{ Cut $3 }
+  | AndL1   	    		{ AndL1 }
+  | AndL2 			{ AndL2 }
+  | AndR			{ AndR }
+  | OrL				{ OrL }
+  | OrR1			{ OrR1 }
+  | OrR2			{ OrR2 }
+  | ImpL			{ ImpL }
+  | ImpR			{ ImpR }
+  | BottomL			{ BottomL }
+  | TopR			{ TopR }
+  | ForallL '[' Term ']'  	{ ForallL $3 }
+  | ForallR ident    		{ ForallR $2 }
+  | ExistL ident  		{ ExistL $2 }
+  | ExistR '[' Term ']'  	{ ExistR $3 }
+  | WL         	    		{ WL }
+  | WR				{ WR }
+  | CL				{ CL }
+  | CR				{ CR }
+  | PL number			{ PL $2 }
+  | PR number			{ PR $2 }
 
-Formula
+Formula :: { Formula }
   : Formula '==>' Formula     { $1 :==>: $3 }
   | forall ident '.' Formula  { Forall $2 $4 }
   | exist ident '.' Formula   { Exist $2 $4 }
@@ -177,16 +200,19 @@ Formula
   | ident '(' Terms ')'       { Pred $1 $3 }
   | ident                     { Pred $1 [] }
 
-Terms
+Terms :: { [Term] }
   : {- empty -}  { [] }
   | Term  { [$1] }
   | Term ',' Terms  { $1 : $3 }
 
-Term
-  : ident  { Var $1 }
-  | ident '(' Terms ')'  { Func $1 $3 }
+Term :: { Term }
+  : Term '(' Terms ')'  	{ App $1 $3 }
+  | ident '=>' Term  		{ Abs [$1] $3 }
+  | '(' Idents ')' '=>' Term  	{ Abs $2 $5 }
+  | '(' Term ')'    		{ $2 }
+  | ident			{ Var $1 }
 
-Type
+Type :: { Type }
   : prop			{ Prop }
   | tvar			{ VarT $1 }
   | ident 			{ ConT $1 [] }
@@ -194,7 +220,7 @@ Type
   | Type '=>' Type  		{ ArrT $1 $3 }
   | '(' Type ')'  		{ $2 }
 
-Types
+Types :: { [Type] }
   : Type  { [$1] }
   | Type ',' Types { $1 : $3 }
 

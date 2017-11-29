@@ -1,8 +1,6 @@
 module Claire.Syntax.LK where
 
-import Data.Sequence as S
 import Claire.Syntax.FOL
-import GHC.Exts (toList)
 
 type AssmIndex = String
 
@@ -19,10 +17,10 @@ data Rule
   | PL Int | PR Int
   deriving (Eq, Show)
 
-data Judgement = Judgement (S.Seq Formula) (S.Seq Formula) deriving (Eq)
+data Judgement = Judgement [Formula] [Formula] deriving (Eq)
 
 instance Show Judgement where
-  show (Judgement assms prop) = show (toList assms) ++ " |- " ++ show prop
+  show (Judgement assms prop) = show (reverse assms) ++ " |- " ++ show prop
 
 formulize :: Judgement -> Formula
 formulize (Judgement assms props) = foldl (:/\:) Top assms :==>: foldl (:\/:) Bottom props

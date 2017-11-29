@@ -1,5 +1,5 @@
 name:                claire
-version:             0.5.0.0
+version:             0.5.1.0
 #synopsis:
 #description:
 homepage:            https://github.com/myuon/claire#readme
@@ -29,6 +29,7 @@ default-extensions:
 ghc-options:
 - -Wunused-imports
 - -Wunused-local-binds
+- -O2
 
 extra-source-files:
 - src/Claire/Parser/Lexer.x

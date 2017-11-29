@@ -14,7 +14,7 @@ main = do
   case (xs /= []) of
     True -> do
       env <- claire defEnv . (\(Laire ds) -> ds) . pLaire =<< readFile (head xs)
-      putStrLn "= Types ="
+      putStrLn "= Constants ="
       mapM_ print $ M.assocs $ types env
       putStrLn "= Proved Theorems ="
       mapM_ print $ M.assocs $ thms env
@@ -31,11 +31,11 @@ main = do
 
 clairepl :: Env -> IO ()
 clairepl env = go env toplevelM where
-  go :: Env -> Coroutine (DeclSuspender IO) (StateT Env IO) () -> IO ()
+  go :: Env -> Coroutine DeclSuspender (StateT Env IO) () -> IO ()
   go env k = do
     (result,env') <- flip runStateT env $ resume k
 --    putStrLn $ "env: " ++ show env'
-  
+
     case result of
       Right () -> go env' k
       Left (DeclAwait k) -> do
@@ -46,11 +46,14 @@ clairepl env = go env toplevelM where
         (t,raw) <- safep (putStr "command>" >> hFlush stdout) (\s -> let s' = pCommand s in s' `seq` (s',s))
         let addProof env k = env { proof = proof env ++ [k] }
         go (addProof env' (t,raw)) (cont t)
-      Left (ComError z cont) -> do
+      Left (z@(RunCommandError idt err cont)) -> do
         print z
         let unaddProof env | length (proof env) >= 1 = env { proof = init (proof env) }
             unaddProof env = env
         go (unaddProof env') cont
+      Left (z@(DeclError idt err cont)) -> do
+        print z
+        go env cont
 
   safep :: IO () -> (String -> a) -> IO a
   safep ma p = ma >> (p <$!> getLine) `catch` (\err -> print (err :: ErrorCall) >> safep ma p)

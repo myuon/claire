@@ -23,7 +23,13 @@ tokens :-
   ","       { \s -> TokenComma }
   "("       { \s -> TokenLParen }
   ")"       { \s -> TokenRParen }
+  "{"       { \s -> TokenLBrace }
+  "}"       { \s -> TokenRBrace }
   "["       { \s -> TokenLBracket }
+  "p["      { \s -> TokenPLBracket }
+  "t["      { \s -> TokenTLBracket }
+  "i["      { \s -> TokenILBracket }
+  "n["      { \s -> TokenNLBracket }
   "]"       { \s -> TokenRBracket }
   "~"       { \s -> TokenTilda }
   [\n]      { \s -> TokenNewline }
@@ -37,8 +43,7 @@ tokens :-
   qed       { \s -> TokenQed }
   axiom     { \s -> TokenAxiom }
   import    { \s -> TokenImport }
-  predicate { \s -> TokenPredicate }
-  term	    { \s -> TokenTerm }
+  constant  { \s -> TokenConstant }
   "print_proof"  { \s -> TokenPrintProof }
   "Hs_file" { \s -> TokenHsFile }
   apply     { \s -> TokenApply }
@@ -88,7 +93,13 @@ data Token
   | TokenComma
   | TokenLParen
   | TokenRParen
+  | TokenLBrace
+  | TokenRBrace
   | TokenLBracket
+  | TokenPLBracket
+  | TokenTLBracket
+  | TokenILBracket
+  | TokenNLBracket
   | TokenRBracket
   | TokenTilda
   | TokenNewline
@@ -102,10 +113,9 @@ data Token
   | TokenProof
   | TokenQed
   | TokenAxiom
-  | TokenPredicate
+  | TokenConstant
   | TokenPrintProof
   | TokenHsFile
-  | TokenTerm
   | TokenImport
   | TokenApply
   | TokenNoApply
